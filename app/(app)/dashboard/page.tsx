@@ -11,6 +11,11 @@ import { StatTile } from "@/components/charts/stat-tile";
 import { AutoRefresh } from "@/components/layout/auto-refresh";
 import { PageHeader } from "@/components/layout/page-header";
 import { RiskStatusCard } from "@/components/risk/risk-status-card";
+import { WeekGoalsCard } from "@/components/goals/week-goals-card";
+import { buildIndex, computeStreaks, scoreDays } from "@/lib/discipline";
+import { evaluateGoal, formatMetric } from "@/lib/goals";
+import { loadDisciplineData } from "@/lib/goals-queries";
+import { periodDays, periodStart, weekday } from "@/lib/periods";
 import { buildRiskToday, getRiskRules, rememberEvents } from "@/lib/risk-queries";
 import { TodayPlanCard } from "@/components/layout/today-plan-card";
 import { TodayEventsCard } from "@/components/news/today-events-card";
@@ -91,6 +96,20 @@ export default async function DashboardPage() {
   ]);
   await rememberEvents(supabase, calendar.events);
   const risk = buildRiskToday(list, trades, riskRules, calendar.events, newsSettings.calendarCurrencies, now);
+
+  // Woche: Disziplin, Ziele, Plan-Serie
+  const week = periodStart(today, "week");
+  const [{ data: discipline }, { data: weekGoals }, { data: weekReview }] = await Promise.all([
+    loadDisciplineData(supabase, { trades, rules: riskRules }),
+    supabase.from("goals").select("*").eq("period_type", "week").eq("period_start", week).order("position").order("created_at"),
+    supabase.from("reviews").select("id").eq("period_type", "week").eq("period_start", week).maybeSingle(),
+  ]);
+  const disciplineIndex = buildIndex(discipline);
+  const weekCtx = { index: disciplineIndex, type: "week" as const, start: week, today };
+  const weekGoalRows = (weekGoals ?? []).map((g) => {
+    const result = evaluateGoal(g, weekCtx);
+    return { id: g.id, title: g.title, status: result.status, valueText: formatMetric(g.metric, result.value, currencyOf.get(g.account_id ?? "")) };
+  });
   const calendarEvents = filterEvents(calendar.events, newsSettings.calendarCurrencies, newsSettings.minImpact);
   const weekStart = (() => {
     const d = new Date(`${today}T12:00:00Z`);
@@ -144,10 +163,17 @@ export default async function DashboardPage() {
           <StatTile label="Dieser Monat" value={moneyList(monthSums)} tone={toneOf(monthSums)} hint="seit dem 1." />
         </section>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
           <TodayPlanCard
             plan={todayPlan}
             tradesToday={trades.filter((t) => berlinParts(t.entry_time).date === today).length}
+          />
+          <WeekGoalsCard
+            score={scoreDays(disciplineIndex, periodDays(week, "week"), today).score}
+            goals={weekGoalRows}
+            planStreak={computeStreaks(disciplineIndex, today).plan.current}
+            hasReview={Boolean(weekReview)}
+            isWeekend={weekday(today) > 5}
           />
           <TodayEventsCard
             events={calendarEvents.filter((e) => berlinDay(e.time) === today)}

@@ -128,6 +128,82 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["daily_plans"]["Insert"]>;
         Relationships: [];
       };
+      goals: {
+        Row: {
+          account_id: string | null;
+          comparison: string;
+          created_at: string;
+          id: string;
+          manual_value: number | null;
+          metric: string;
+          notes: string | null;
+          period_start: string;
+          period_type: string;
+          position: number;
+          target: number;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          account_id?: string | null;
+          comparison: string;
+          created_at?: string;
+          id?: string;
+          manual_value?: number | null;
+          metric: string;
+          notes?: string | null;
+          period_start: string;
+          period_type: string;
+          position?: number;
+          target: number;
+          title: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["goals"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "goals_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      reviews: {
+        Row: {
+          created_at: string;
+          id: string;
+          lessons: string | null;
+          next_focus: string | null;
+          period_start: string;
+          period_type: string;
+          rating: number | null;
+          stats: Json;
+          to_improve: string | null;
+          updated_at: string;
+          user_id: string;
+          went_well: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          lessons?: string | null;
+          next_focus?: string | null;
+          period_start: string;
+          period_type: string;
+          rating?: number | null;
+          stats?: Json;
+          to_improve?: string | null;
+          updated_at?: string;
+          user_id?: string;
+          went_well?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["reviews"]["Insert"]>;
+        Relationships: [];
+      };
       import_batches: {
         Row: {
           account_id: string;
