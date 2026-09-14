@@ -1,0 +1,203 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import {
+  FormError,
+  bool,
+  list,
+  money,
+  num,
+  requiredNum,
+  requiredText,
+  text,
+  type FormState,
+} from "@/lib/form-data";
+import { guessSession } from "@/lib/trading";
+import type { TablesInsert } from "@/lib/database.types";
+
+function parseTrade(formData: FormData): TablesInsert<"trades"> {
+  const entryTime = requiredText(formData, "entry_time", "Einstiegszeit");
+  const exitTime = text(formData, "exit_time");
+  const status = requiredText(formData, "status", "Status");
+  const quantity = requiredNum(formData, "quantity", "Menge");
+  const rating = num(formData, "rating");
+
+  if (quantity <= 0) throw new FormError("Die Menge muss größer als 0 sein.");
+  if (exitTime && exitTime < entryTime) throw new FormError("Der Ausstieg liegt vor dem Einstieg.");
+
+  const riskAmount = money(formData, "risk_amount");
+  if (riskAmount != null && riskAmount <= 0) throw new FormError("Das Risiko muss größer als 0 sein.");
+
+  const tags = (text(formData, "tags") ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+  return {
+    account_id: requiredText(formData, "account_id", "Account"),
+    symbol: requiredText(formData, "symbol", "Symbol").toUpperCase(),
+    direction: requiredText(formData, "direction", "Richtung"),
+    status,
+    entry_time: entryTime,
+    exit_time: status === "closed" ? exitTime : null,
+    entry_price: num(formData, "entry_price"),
+    exit_price: status === "closed" ? num(formData, "exit_price") : null,
+    quantity,
+    stop_loss: num(formData, "stop_loss"),
+    take_profit: num(formData, "take_profit"),
+    pnl: money(formData, "pnl"),
+    commission: money(formData, "commission") ?? 0,
+    swap: money(formData, "swap") ?? 0,
+    risk_amount: riskAmount,
+    session: text(formData, "session") ?? guessSession(entryTime),
+    setup_quality: text(formData, "setup_quality"),
+    emotion: text(formData, "emotion"),
+    mistakes: list(formData, "mistakes"),
+    tags,
+    followed_plan: bool(formData, "followed_plan"),
+    rating: rating == null ? null : Math.round(rating),
+    notes: text(formData, "notes"),
+    lessons: text(formData, "lessons"),
+    strategy_id: text(formData, "strategy_id"),
+  };
+}
+
+/**
+ * Speichert die Checklisten-Häkchen eines Trades für die gewählte Strategie.
+ * `checklist_item` = alle angezeigten Punkte, `checklist_checked` = die abgehakten.
+ */
+async function syncChecklist(supabase: Awaited<ReturnType<typeof createClient>>, tradeId: string, formData: FormData) {
+  const shown = list(formData, "checklist_item");
+  const checked = new Set(list(formData, "checklist_checked"));
+
+  // Häkchen anderer (vorher gewählter) Strategien entfernen
+  let cleanup = supabase.from("trade_checklist_results").delete().eq("trade_id", tradeId);
+  if (shown.length) cleanup = cleanup.not("item_id", "in", `(${shown.join(",")})`);
+  await cleanup;
+
+  if (shown.length) {
+    const { error } = await supabase
+      .from("trade_checklist_results")
+      .upsert(shown.map((item_id) => ({ trade_id: tradeId, item_id, checked: checked.has(item_id) })));
+    if (error) throw new Error(`Checkliste konnte nicht gespeichert werden: ${error.message}`);
+  }
+}
+
+const UUID = /^[0-9a-f-]{36}$/i;
+
+async function requireUser() {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) redirect("/login");
+  return supabase;
+}
+
+export async function saveTrade(
+  tradeId: string | null,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const supabase = await requireUser();
+
+  let values: TablesInsert<"trades">;
+  try {
+    values = parseTrade(formData);
+  } catch (e) {
+    if (e instanceof FormError) return { error: e.message };
+    throw e;
+  }
+
+  const query = tradeId
+    ? supabase.from("trades").update(values).eq("id", tradeId).select("id").single()
+    : supabase.from("trades").insert(values).select("id").single();
+  const { data, error } = await query;
+
+  if (error) return { error: `Speichern fehlgeschlagen: ${error.message}` };
+
+  if (list(formData, "checklist_item").some((id) => !UUID.test(id))) return { error: "Ungültige Checkliste." };
+  try {
+    await syncChecklist(supabase, data.id, formData);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Checkliste konnte nicht gespeichert werden." };
+  }
+
+  revalidatePath("/journal");
+  revalidatePath("/accounts");
+  revalidatePath("/strategies");
+  redirect(`/journal/${data.id}`);
+}
+
+/** Mehrere Trades auf einmal bearbeiten (z. B. importierten Trades eine Strategie zuweisen). */
+export async function bulkUpdateTrades(input: {
+  tradeIds: string[];
+  strategyId?: string | null;
+  setupQuality?: string | null;
+}): Promise<{ updated: number }> {
+  const supabase = await requireUser();
+  const ids = input.tradeIds.filter((id) => UUID.test(id)).slice(0, 1000);
+  if (!ids.length) return { updated: 0 };
+
+  const values: { strategy_id?: string | null; setup_quality?: string | null } = {};
+  if (input.strategyId !== undefined) {
+    if (input.strategyId !== null && !UUID.test(input.strategyId)) throw new Error("Ungültige Strategie");
+    values.strategy_id = input.strategyId;
+  }
+  if (input.setupQuality !== undefined) {
+    if (input.setupQuality !== null && !["A+", "A", "B", "C"].includes(input.setupQuality)) throw new Error("Ungültige Setup-Qualität");
+    values.setup_quality = input.setupQuality;
+  }
+  if (!Object.keys(values).length) return { updated: 0 };
+
+  // Trades, deren Strategie sich wirklich ändert – nur dort passen alte Checklisten-Häkchen nicht mehr
+  let changed: string[] = [];
+  if (values.strategy_id !== undefined) {
+    const { data: before } = await supabase.from("trades").select("id, strategy_id").in("id", ids);
+    changed = (before ?? []).filter((t) => t.strategy_id !== values.strategy_id).map((t) => t.id);
+  }
+
+  const { data, error } = await supabase.from("trades").update(values).in("id", ids).select("id");
+  if (error) throw new Error(error.message);
+
+  if (changed.length) await supabase.from("trade_checklist_results").delete().in("trade_id", changed);
+
+  revalidatePath("/journal");
+  revalidatePath("/strategies");
+  revalidatePath("/stats");
+  return { updated: data.length };
+}
+
+export async function deleteTrade(tradeId: string) {
+  const supabase = await requireUser();
+
+  const { data: shots } = await supabase
+    .from("trade_screenshots")
+    .select("storage_path")
+    .eq("trade_id", tradeId);
+  const paths = (shots ?? []).map((s) => s.storage_path);
+  if (paths.length) await supabase.storage.from("screenshots").remove(paths);
+
+  const { error } = await supabase.from("trades").delete().eq("id", tradeId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/journal");
+  revalidatePath("/accounts");
+  redirect("/journal");
+}
+
+export async function deleteScreenshot(screenshotId: string, tradeId: string) {
+  const supabase = await requireUser();
+  const { data: shot } = await supabase
+    .from("trade_screenshots")
+    .select("storage_path")
+    .eq("id", screenshotId)
+    .maybeSingle();
+  if (!shot) return;
+
+  await supabase.storage.from("screenshots").remove([shot.storage_path]);
+  const { error } = await supabase.from("trade_screenshots").delete().eq("id", screenshotId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/journal/${tradeId}`);
+}
