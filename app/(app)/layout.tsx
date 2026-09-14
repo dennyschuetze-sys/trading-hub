@@ -11,6 +11,12 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="flex min-h-screen">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:shadow-md focus:ring-2 focus:ring-ring"
+      >
+        Zum Inhalt springen
+      </a>
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r bg-sidebar p-4 lg:block">
         <SidebarNav />
       </aside>
@@ -23,7 +29,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             <UserMenu email={user.email ?? ""} />
           </div>
         </header>
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main id="main" tabIndex={-1} className="flex-1 p-4 outline-none md:p-6">{children}</main>
       </div>
     </div>
   );

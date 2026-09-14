@@ -36,7 +36,7 @@ export function LoginForm({ allowSignup }: { allowSignup: boolean }) {
           <form action={isLogin ? loginAction : registerAction} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">E-Mail</Label>
-              <Input id="email" name="email" type="email" autoComplete="email" required />
+              <Input id="email" name="email" type="email" autoComplete="email" spellCheck={false} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Passwort</Label>
@@ -50,8 +50,11 @@ export function LoginForm({ allowSignup }: { allowSignup: boolean }) {
               />
             </div>
 
-            {state.error && <p className="text-sm text-loss">{state.error}</p>}
-            {state.message && <p className="text-sm text-profit">{state.message}</p>}
+            {/* Live-Region bleibt immer im DOM (sonst liest der Screenreader neue Meldungen nicht vor); leer ohne Abstand */}
+            <div aria-live="polite" className="empty:-mt-4">
+              {state.error && <p className="text-sm text-loss">{state.error}</p>}
+              {state.message && <p className="text-sm text-profit">{state.message}</p>}
+            </div>
 
             <Button type="submit" disabled={pending} className="w-full">
               {pending ? "Bitte warten …" : isLogin ? "Anmelden" : "Registrieren"}

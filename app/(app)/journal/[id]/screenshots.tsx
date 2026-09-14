@@ -4,6 +4,16 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
@@ -29,6 +39,7 @@ export function Screenshots({
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [preview, setPreview] = useState<ScreenshotView | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<ScreenshotView | null>(null);
   const [deleting, startDelete] = useTransition();
 
   const upload = useCallback(
@@ -149,16 +160,7 @@ export function Screenshots({
                 disabled={deleting}
                 aria-label="Screenshot löschen"
                 className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 max-sm:opacity-100"
-                onClick={() =>
-                  startDelete(async () => {
-                    try {
-                      await deleteScreenshot(shot.id, tradeId);
-                      toast.success("Screenshot gelöscht");
-                    } catch {
-                      toast.error("Löschen fehlgeschlagen");
-                    }
-                  })
-                }
+                onClick={() => setConfirmDelete(shot)}
               >
                 <Trash2 className="size-4" />
               </Button>
@@ -166,6 +168,39 @@ export function Screenshots({
           ))}
         </div>
       )}
+
+      <AlertDialog open={confirmDelete != null} onOpenChange={(open) => !open && !deleting && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Screenshot löschen?</AlertDialogTitle>
+            <AlertDialogDescription>Das Bild wird endgültig entfernt.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleting}
+              onClick={(e) => {
+                e.preventDefault();
+                const shot = confirmDelete;
+                if (!shot) return;
+                startDelete(async () => {
+                  try {
+                    await deleteScreenshot(shot.id, tradeId);
+                    toast.success("Screenshot gelöscht");
+                    setConfirmDelete(null);
+                  } catch {
+                    toast.error("Löschen fehlgeschlagen");
+                  }
+                });
+              }}
+            >
+              {deleting && <Loader2 className="size-4 animate-spin" />}
+              Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={preview != null} onOpenChange={(open) => !open && setPreview(null)}>
         <DialogContent className="max-w-[95vw] p-2 sm:max-w-[90vw]">

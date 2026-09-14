@@ -75,7 +75,8 @@ async function syncChecklist(supabase: Awaited<ReturnType<typeof createClient>>,
   // Häkchen anderer (vorher gewählter) Strategien entfernen
   let cleanup = supabase.from("trade_checklist_results").delete().eq("trade_id", tradeId);
   if (shown.length) cleanup = cleanup.not("item_id", "in", `(${shown.join(",")})`);
-  await cleanup;
+  const { error: cleanupError } = await cleanup;
+  if (cleanupError) throw new Error(`Checkliste konnte nicht gespeichert werden: ${cleanupError.message}`);
 
   if (shown.length) {
     const { error } = await supabase

@@ -122,10 +122,12 @@ export async function importTradeChunk(input: {
 
   const imported = data.length;
   const skipped = rows.length - imported;
-  await supabase
+  // Die Chunks laufen nacheinander (siehe import-wizard), daher reicht Lesen + Schreiben
+  const { error: countError } = await supabase
     .from("import_batches")
     .update({ imported_count: batch.imported_count + imported, skipped_count: batch.skipped_count + skipped })
     .eq("id", batch.id);
+  if (countError) console.error("Import-Zähler nicht aktualisiert", countError);
 
   return { imported, skipped };
 }

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SelectField } from "@/components/forms/field";
 import { SETUP_QUALITIES, formatDateTime, formatMoney, formatNumber, formatR, pnlClass } from "@/lib/trading";
 import { bulkUpdateTrades } from "./actions";
@@ -184,12 +185,26 @@ export function JournalTable({ rows, strategies }: { rows: JournalRow[]; strateg
                   <TableCell>
                     <span className="flex items-center gap-1.5">
                       {t.violations.length > 0 && (
-                        <span className="relative z-10 cursor-help" title={t.violations.join("\n")}>
-                          <ShieldAlert className="size-4 text-loss" aria-hidden />
-                          <span className="sr-only">Regelverstoß: {t.violations.join("; ")}</span>
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              tabIndex={0}
+                              className="relative z-10 cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <ShieldAlert className="size-4 text-loss" aria-hidden />
+                              <span className="sr-only">Regelverstoß: {t.violations.join("; ")}</span>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {t.violations.map((v, i) => (
+                              <p key={i}>{v}</p>
+                            ))}
+                          </TooltipContent>
+                        </Tooltip>
                       )}
-                      {t.screenshots > 0 && <ImageIcon className="size-4 text-muted-foreground" aria-label="Hat Screenshots" />}
+                      {t.screenshots > 0 && (
+                        <ImageIcon className="size-4 text-muted-foreground" role="img" aria-label="Hat Screenshots" />
+                      )}
                     </span>
                   </TableCell>
                 </TableRow>
