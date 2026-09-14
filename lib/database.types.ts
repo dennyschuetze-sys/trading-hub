@@ -54,6 +54,28 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["accounts"]["Insert"]>;
         Relationships: [];
       };
+      calendar_history: {
+        Row: {
+          created_at: string;
+          currency: string;
+          event_key: string;
+          event_time: string;
+          impact: string;
+          title: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          currency: string;
+          event_key: string;
+          event_time: string;
+          impact?: string;
+          title: string;
+          user_id?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["calendar_history"]["Insert"]>;
+        Relationships: [];
+      };
       daily_plans: {
         Row: {
           created_at: string;
@@ -242,6 +264,13 @@ export type Database = {
           calendar_currencies: string[];
           calendar_min_impact: string;
           created_at: string;
+          daily_loss_limit_pct: number | null;
+          default_risk_pct: number | null;
+          max_consecutive_losses: number | null;
+          max_risk_per_trade_pct: number | null;
+          max_trades_per_day: number | null;
+          news_block_after_min: number | null;
+          news_block_before_min: number | null;
           news_sources: string[];
           updated_at: string;
           user_id: string;
@@ -250,6 +279,13 @@ export type Database = {
           calendar_currencies?: string[];
           calendar_min_impact?: string;
           created_at?: string;
+          daily_loss_limit_pct?: number | null;
+          default_risk_pct?: number | null;
+          max_consecutive_losses?: number | null;
+          max_risk_per_trade_pct?: number | null;
+          max_trades_per_day?: number | null;
+          news_block_after_min?: number | null;
+          news_block_before_min?: number | null;
           news_sources?: string[];
           updated_at?: string;
           user_id?: string;

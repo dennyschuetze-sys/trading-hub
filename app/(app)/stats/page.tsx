@@ -11,6 +11,8 @@ import { PnlCalendar } from "@/components/charts/pnl-calendar";
 import { StatTile } from "@/components/charts/stat-tile";
 import { PageHeader } from "@/components/layout/page-header";
 import { fetchStatTrades } from "@/lib/queries";
+import { loadViolations } from "@/lib/risk-queries";
+import { hasAnyRule, ruleBreakdowns } from "@/lib/risk-rules";
 import { RANGES, rangeStart, resolveScope, scopeOptions } from "@/lib/scope";
 import { closeTime, closedTrades, dailyResults, equityCurve, maxDrawdown, standardBreakdowns, summarize } from "@/lib/stats";
 import { createClient } from "@/lib/supabase/server";
@@ -71,6 +73,9 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
   const dd = maxDrawdown(curve);
   const days = dailyResults(trades);
   const b = standardBreakdowns(trades, new Map((strategies ?? []).map((st) => [st.id, st.name])));
+  // Verstöße über alle Trades berechnen (Tageszählung braucht auch Trades außerhalb des Filters)
+  const { violations, rules } = await loadViolations(supabase, {}, { trades: allTrades });
+  const ruleRows = ruleBreakdowns(trades, violations);
   const money = (v: number | null, signed = false) => formatMoney(v, scope.currency, signed);
   const pct = (v: number | null) => (v == null ? "–" : `${formatNumber(v * 100, 1)} %`);
   const rangeLabel = RANGES.find((r) => r.value === range)!.label;
@@ -236,6 +241,17 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
               emptyText="Markiere bei deinen Trades, ob du den Plan eingehalten hast."
             />
             <BreakdownTable title="Fehler" rows={b.mistakes} currency={scope.currency} />
+            {hasAnyRule(rules) && (
+              <>
+                <BreakdownTable title="Persönliche Regeln" rows={ruleRows.compliance} currency={scope.currency} />
+                <BreakdownTable
+                  title="Nach Regelverstoß"
+                  rows={ruleRows.byRule}
+                  currency={scope.currency}
+                  emptyText="Keine Regelverstöße in diesem Zeitraum."
+                />
+              </>
+            )}
           </section>
         </div>
       )}

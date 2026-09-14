@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Pencil, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Pencil, ShieldAlert, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteButton } from "@/components/forms/delete-button";
+import { loadViolations } from "@/lib/risk-queries";
+import { VIOLATION_LABELS } from "@/lib/risk-rules";
+import { berlinParts } from "@/lib/stats";
 import { createClient } from "@/lib/supabase/server";
 import {
   SESSIONS,
+  dayBoundary,
   formatDateTime,
   formatMoney,
   formatNumber,
@@ -32,6 +36,13 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
       .eq("trade_id", id),
   ]);
   if (!trade || !auth.user) notFound();
+
+  const day = berlinParts(trade.entry_time).date;
+  const { violations } = await loadViolations(supabase, {
+    entryFrom: dayBoundary(day, "start"),
+    entryTo: dayBoundary(day, "end"),
+  });
+  const tradeViolations = violations.get(trade.id) ?? [];
 
   const checklist = (checklistResults ?? [])
     .flatMap((r) => (r.strategy_checklist_items ? [{ ...r.strategy_checklist_items, checked: r.checked }] : []))
@@ -140,6 +151,29 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
         </div>
 
         <div className="grid content-start gap-6">
+          {tradeViolations.length > 0 && (
+            <Card className="gap-3 border-loss/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldAlert className="size-4 text-loss" aria-hidden /> Regelverstoß
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-2 text-sm">
+                <ul className="grid gap-1.5">
+                  {tradeViolations.map((v) => (
+                    <li key={v.kind}>
+                      <span className="font-medium">{VIOLATION_LABELS[v.kind]}</span>
+                      <span className="block text-muted-foreground">{v.message}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/risk" className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">
+                  Regeln ansehen
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Strategie</CardTitle>

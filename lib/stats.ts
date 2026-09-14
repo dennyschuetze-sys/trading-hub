@@ -18,6 +18,7 @@ export type StatTrade = Pick<
   | "mistakes"
   | "followed_plan"
   | "strategy_id"
+  | "risk_amount"
 >;
 
 // Zeit in Berliner Zeit -----------------------------------------------------------

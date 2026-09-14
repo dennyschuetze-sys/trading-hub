@@ -18,6 +18,7 @@ export function useFormAction(
   // Lange Formulare: Fehler zusätzlich als Hinweis oben einblenden
   useEffect(() => {
     if (state.error) toast.error(state.error);
+    else if (state.success) toast.success(state.success);
   }, [state]);
 
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {

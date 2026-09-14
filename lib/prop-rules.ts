@@ -35,10 +35,10 @@ export function statusFor(ratio: number): RuleStatus {
 }
 
 const ORDER: RuleStatus[] = ["ok", "warning", "danger", "breached"];
-const worst = (a: RuleStatus, b: RuleStatus) => (ORDER.indexOf(a) > ORDER.indexOf(b) ? a : b);
+export const worst = (a: RuleStatus, b: RuleStatus) => (ORDER.indexOf(a) > ORDER.indexOf(b) ? a : b);
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-function meter(used: number, limit: number): RuleMeter {
+export function meter(used: number, limit: number): RuleMeter {
   const u = round2(Math.max(0, used));
   const ratio = limit > 0 ? u / limit : 0;
   return { used: u, limit, ratio, remaining: round2(limit - u), status: statusFor(ratio) };

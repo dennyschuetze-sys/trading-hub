@@ -4,6 +4,7 @@ import { EventList } from "@/components/news/event-list";
 import { PageHeader } from "@/components/layout/page-header";
 import { berlinDay, currenciesForSymbol, filterEvents, nextEvent, relativeTime } from "@/lib/calendar";
 import { getCalendar, getNews, getNewsSettings } from "@/lib/feeds";
+import { rememberEvents } from "@/lib/risk-queries";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/trading";
 import { CalendarFilters } from "./calendar-filters";
@@ -18,6 +19,7 @@ export default async function NewsPage() {
     getNews(settings.newsSources),
     supabase.from("trades").select("symbol").eq("is_backtest", false).limit(1000),
   ]);
+  await rememberEvents(supabase, calendar.events);
 
   // Vorschlag: Währungen der Symbole, die tatsächlich gehandelt werden
   const suggested = [...new Set((symbols ?? []).flatMap((s) => currenciesForSymbol(s.symbol)))].sort();

@@ -5,6 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/forms/field";
 import { PageHeader } from "@/components/layout/page-header";
+import { loadViolations } from "@/lib/risk-queries";
+import type { Violation } from "@/lib/risk-rules";
+import { berlinParts } from "@/lib/stats";
 import { createClient } from "@/lib/supabase/server";
 import { dayBoundary } from "@/lib/trading";
 import { JournalTable } from "./journal-table";
@@ -54,6 +57,15 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
     supabase.from("accounts").select("id, name").order("name"),
     supabase.from("strategies").select("id, name").order("name"),
   ]);
+
+  // Regelverstöße für die Tage dieser Seite
+  const entryTimes = (trades ?? []).map((t) => t.entry_time).sort();
+  const { violations } = entryTimes.length
+    ? await loadViolations(supabase, {
+        entryFrom: dayBoundary(berlinParts(entryTimes[0]).date, "start"),
+        entryTo: dayBoundary(berlinParts(entryTimes.at(-1)!).date, "end"),
+      })
+    : { violations: new Map<string, Violation[]>() };
 
   const total = count ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -162,6 +174,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
             currency: t.accounts?.currency ?? "USD",
             strategyName: t.strategies?.name ?? null,
             screenshots: t.trade_screenshots[0]?.count ?? 0,
+            violations: (violations.get(t.id) ?? []).map((v) => v.message),
           }))}
         />
       )}

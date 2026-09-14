@@ -19,6 +19,7 @@ import {
 import { eventTime } from "@/components/news/event-list";
 import { berlinDay, filterEvents } from "@/lib/calendar";
 import { getCalendar, getNewsSettings } from "@/lib/feeds";
+import { rememberEvents } from "@/lib/risk-queries";
 import { createClient } from "@/lib/supabase/server";
 import { dayBoundary, formatMoney, formatDateTime, plural, pnlClass } from "@/lib/trading";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,7 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
 
   const supabase = await createClient();
   const [calendar, newsSettings] = await Promise.all([getCalendar(), getNewsSettings(supabase)]);
+  await rememberEvents(supabase, calendar.events);
   const dayEvents = filterEvents(calendar.events, newsSettings.calendarCurrencies, newsSettings.minImpact)
     .filter((e) => berlinDay(e.time) === date)
     .map((e) => ({ id: e.id, title: e.title, currency: e.currency, impact: e.impact, timeLabel: eventTime(e) }));

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Image as ImageIcon, Loader2, X } from "lucide-react";
+import { Image as ImageIcon, Loader2, ShieldAlert, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ export type JournalRow = {
   currency: string;
   strategyName: string | null;
   screenshots: number;
+  /** Verstöße gegen persönliche Regeln (Beschreibungen) */
+  violations: string[];
 };
 
 const UNCHANGED = "__unchanged__";
@@ -129,7 +131,9 @@ export function JournalTable({ rows, strategies }: { rows: JournalRow[]; strateg
                 <TableHead className="text-right">R</TableHead>
                 <TableHead className="hidden lg:table-cell">Setup</TableHead>
                 <TableHead className="hidden lg:table-cell">Fehler</TableHead>
-                <TableHead className="w-8" />
+                <TableHead className="w-12">
+                  <span className="sr-only">Hinweise</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -178,7 +182,15 @@ export function JournalTable({ rows, strategies }: { rows: JournalRow[]; strateg
                     )}
                   </TableCell>
                   <TableCell>
-                    {t.screenshots > 0 && <ImageIcon className="size-4 text-muted-foreground" aria-label="Hat Screenshots" />}
+                    <span className="flex items-center gap-1.5">
+                      {t.violations.length > 0 && (
+                        <span className="relative z-10 cursor-help" title={t.violations.join("\n")}>
+                          <ShieldAlert className="size-4 text-loss" aria-hidden />
+                          <span className="sr-only">Regelverstoß: {t.violations.join("; ")}</span>
+                        </span>
+                      )}
+                      {t.screenshots > 0 && <ImageIcon className="size-4 text-muted-foreground" aria-label="Hat Screenshots" />}
+                    </span>
                   </TableCell>
                 </TableRow>
               ))}

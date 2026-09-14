@@ -22,6 +22,7 @@ function trade(net: number, exit: string, extra: Partial<StatTrade> = {}): StatT
     mistakes: [],
     followed_plan: null,
     strategy_id: null,
+    risk_amount: null,
     ...extra,
   };
 }

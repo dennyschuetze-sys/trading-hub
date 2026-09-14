@@ -1,6 +1,7 @@
 import "server-only";
 import { parseForexFactory, type CalendarEvent } from "@/lib/calendar";
 import { mergeNews, NEWS_SOURCES, parseRss, type NewsItem } from "@/lib/news";
+import type { FxRates } from "@/lib/position-size";
 import type { createClient } from "@/lib/supabase/server";
 
 const USER_AGENT = "TradingHub/1.0 (personal trading journal)";
@@ -31,6 +32,22 @@ export async function getCalendar(): Promise<CalendarResult> {
   } catch (e) {
     console.error("Kalender-Abruf fehlgeschlagen", e);
     return { events: [], error: "Der Wirtschaftskalender ist gerade nicht erreichbar." };
+  }
+}
+
+/** EZB-Referenzkurse (1 EUR = x), täglich aktualisiert – für den Positionsgrößen-Rechner. */
+export async function getFxRates(): Promise<FxRates | null> {
+  try {
+    const json: unknown = JSON.parse(await fetchText("https://api.frankfurter.dev/v1/latest?base=EUR", 3600));
+    const raw = json as { date?: unknown; rates?: Record<string, unknown> };
+    if (typeof raw.date !== "string" || !raw.rates || typeof raw.rates !== "object") return null;
+    const rates = Object.fromEntries(
+      Object.entries(raw.rates).filter((e): e is [string, number] => /^[A-Z]{3}$/.test(e[0]) && typeof e[1] === "number" && e[1] > 0),
+    );
+    return { date: raw.date.slice(0, 10), rates };
+  } catch (e) {
+    console.error("Wechselkurse nicht verfügbar", e);
+    return null;
   }
 }
 

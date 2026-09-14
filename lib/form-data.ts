@@ -75,4 +75,4 @@ export function list(formData: FormData, key: string): string[] {
 
 export class FormError extends Error {}
 
-export type FormState = { error?: string };
+export type FormState = { error?: string; success?: string };

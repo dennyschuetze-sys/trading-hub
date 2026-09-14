@@ -8,7 +8,10 @@ import { longDate } from "@/components/charts/format";
 import { PnlCalendar } from "@/components/charts/pnl-calendar";
 import { RuleMeter, StatusBadge } from "@/components/charts/rule-meter";
 import { StatTile } from "@/components/charts/stat-tile";
+import { AutoRefresh } from "@/components/layout/auto-refresh";
 import { PageHeader } from "@/components/layout/page-header";
+import { RiskStatusCard } from "@/components/risk/risk-status-card";
+import { buildRiskToday, getRiskRules, rememberEvents } from "@/lib/risk-queries";
 import { TodayPlanCard } from "@/components/layout/today-plan-card";
 import { TodayEventsCard } from "@/components/news/today-events-card";
 import { berlinDay, filterEvents, nextEvent } from "@/lib/calendar";
@@ -80,11 +83,14 @@ export default async function DashboardPage() {
   const now = new Date();
   const currencyOf = new Map(list.map((a) => [a.id, a.currency]));
   const today = berlinParts(now.toISOString()).date;
-  const [{ data: todayPlan }, calendar, newsSettings] = await Promise.all([
+  const [{ data: todayPlan }, calendar, newsSettings, riskRules] = await Promise.all([
     supabase.from("daily_plans").select("*").eq("plan_date", today).maybeSingle(),
     getCalendar(),
     getNewsSettings(supabase),
+    getRiskRules(supabase),
   ]);
+  await rememberEvents(supabase, calendar.events);
+  const risk = buildRiskToday(list, trades, riskRules, calendar.events, newsSettings.calendarCurrencies, now);
   const calendarEvents = filterEvents(calendar.events, newsSettings.calendarCurrencies, newsSettings.minImpact);
   const weekStart = (() => {
     const d = new Date(`${today}T12:00:00Z`);
@@ -128,7 +134,10 @@ export default async function DashboardPage() {
         </div>
       </PageHeader>
 
+      <AutoRefresh />
       <div className="grid gap-6">
+        <RiskStatusCard rows={risk.rows} lock={risk.lock} rules={riskRules} now={now} showLink />
+
         <section className="grid gap-3 sm:grid-cols-3" aria-label="Ergebnisse">
           <StatTile label="Heute" value={moneyList(todaySums)} tone={toneOf(todaySums)} hint={`${todayCount} ${todayCount === 1 ? "Trade" : "Trades"}`} />
           <StatTile label="Diese Woche" value={moneyList(weekSums)} tone={toneOf(weekSums)} hint="seit Montag" />
