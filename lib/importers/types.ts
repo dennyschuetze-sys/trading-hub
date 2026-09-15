@@ -53,6 +53,8 @@ export type TradeImportRow = {
   pnl: number | null;
   commission: number;
   swap: number;
+  /** Aus SL und Ergebnis berechnet, Basis für das R-Multiple */
+  risk_amount: number | null;
 };
 
 export class ImportError extends Error {}

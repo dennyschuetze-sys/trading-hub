@@ -1,3 +1,4 @@
+import { estimateRisk } from "@/lib/r-multiple";
 import { wallTimeToIso } from "@/lib/time";
 import { parseCsv, type Rows } from "./cells";
 import { parseMetaTrader } from "./metatrader";
@@ -60,6 +61,13 @@ export function toImportRows(trades: ParsedTrade[], timeZone: string): TradeImpo
     pnl: t.pnl,
     commission: t.commission,
     swap: t.swap,
+    risk_amount: estimateRisk({
+      direction: t.direction,
+      entry_price: t.entryPrice,
+      exit_price: t.exitPrice,
+      stop_loss: t.stopLoss,
+      pnl: t.pnl,
+    }),
   }));
 }
 

@@ -14,6 +14,7 @@ import {
   text,
   type FormState,
 } from "@/lib/form-data";
+import { estimateRisk } from "@/lib/r-multiple";
 import { guessSession } from "@/lib/trading";
 import type { TablesInsert } from "@/lib/database.types";
 
@@ -27,8 +28,17 @@ function parseTrade(formData: FormData): TablesInsert<"trades"> {
   if (quantity <= 0) throw new FormError("Die Menge muss größer als 0 sein.");
   if (exitTime && exitTime < entryTime) throw new FormError("Der Ausstieg liegt vor dem Einstieg.");
 
-  const riskAmount = money(formData, "risk_amount");
-  if (riskAmount != null && riskAmount <= 0) throw new FormError("Das Risiko muss größer als 0 sein.");
+  const enteredRisk = money(formData, "risk_amount");
+  if (enteredRisk != null && enteredRisk <= 0) throw new FormError("Das Risiko muss größer als 0 sein.");
+  const direction = requiredText(formData, "direction", "Richtung");
+  const prices = {
+    entry_price: num(formData, "entry_price"),
+    exit_price: status === "closed" ? num(formData, "exit_price") : null,
+    stop_loss: num(formData, "stop_loss"),
+    pnl: money(formData, "pnl"),
+  };
+  // Ohne Eingabe aus SL und Ergebnis berechnen, damit das R-Multiple nicht fehlt
+  const riskAmount = enteredRisk ?? estimateRisk({ direction, ...prices });
 
   const tags = (text(formData, "tags") ?? "")
     .split(",")
@@ -43,16 +53,13 @@ function parseTrade(formData: FormData): TablesInsert<"trades"> {
     backtest_session_id: backtestSessionId,
     is_backtest: backtestSessionId != null,
     symbol: requiredText(formData, "symbol", "Symbol").toUpperCase(),
-    direction: requiredText(formData, "direction", "Richtung"),
+    direction,
     status,
     entry_time: entryTime,
     exit_time: status === "closed" ? exitTime : null,
-    entry_price: num(formData, "entry_price"),
-    exit_price: status === "closed" ? num(formData, "exit_price") : null,
+    ...prices,
     quantity,
-    stop_loss: num(formData, "stop_loss"),
     take_profit: num(formData, "take_profit"),
-    pnl: money(formData, "pnl"),
     commission: money(formData, "commission") ?? 0,
     swap: money(formData, "swap") ?? 0,
     risk_amount: riskAmount,

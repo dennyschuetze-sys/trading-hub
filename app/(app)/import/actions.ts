@@ -32,6 +32,7 @@ function validateRow(row: TradeImportRow, index: number): Omit<TablesInsert<"tra
   if (row.exit_time != null && !isIso(row.exit_time)) fail("ungültige Ausstiegszeit");
   const quantity = finiteOrNull(row.quantity);
   if (quantity == null || quantity <= 0) fail("ungültige Menge");
+  const riskAmount = finiteOrNull(row.risk_amount);
 
   return {
     external_id: row.external_id,
@@ -48,6 +49,7 @@ function validateRow(row: TradeImportRow, index: number): Omit<TablesInsert<"tra
     pnl: finiteOrNull(row.pnl),
     commission: finiteOrNull(row.commission) ?? 0,
     swap: finiteOrNull(row.swap) ?? 0,
+    risk_amount: riskAmount != null && riskAmount > 0 ? riskAmount : null,
     session: guessSession(row.entry_time),
   };
 }
@@ -92,11 +94,15 @@ export async function createImportBatch(input: {
   return { batchId: data.id };
 }
 
-/** Speichert einen Teil der Trades; bereits vorhandene (gleiche ID) werden übersprungen. */
+/**
+ * Speichert einen Teil der Trades; bereits vorhandene (gleiche ID) werden übersprungen.
+ * Fehlt bei vorhandenen Trades das Risiko, wird es samt ursprünglichem SL ergänzt –
+ * manuell eingetragene Werte bleiben unangetastet.
+ */
 export async function importTradeChunk(input: {
   batchId: string;
   rows: TradeImportRow[];
-}): Promise<{ imported: number; skipped: number }> {
+}): Promise<{ imported: number; skipped: number; completed: number }> {
   const supabase = await requireUser();
   if (!Array.isArray(input.rows) || input.rows.length > MAX_CHUNK) throw new Error("Ungültige Datenmenge");
 
@@ -117,11 +123,30 @@ export async function importTradeChunk(input: {
   const { data, error } = await supabase
     .from("trades")
     .upsert(rows, { onConflict: "account_id,source,external_id", ignoreDuplicates: true })
-    .select("id");
+    .select("id, external_id");
   if (error) throw new Error(`Speichern fehlgeschlagen: ${error.message}`);
 
   const imported = data.length;
   const skipped = rows.length - imported;
+
+  const insertedIds = new Set(data.map((d) => d.external_id));
+  const toComplete = rows.filter((r) => r.risk_amount != null && !insertedIds.has(r.external_id!));
+  let completed = 0;
+  for (let i = 0; i < toComplete.length; i += 25) {
+    const results = await Promise.all(
+      toComplete.slice(i, i + 25).map((r) =>
+        supabase
+          .from("trades")
+          .update({ stop_loss: r.stop_loss, risk_amount: r.risk_amount })
+          .eq("account_id", batch.account_id)
+          .eq("source", batch.source)
+          .eq("external_id", r.external_id!)
+          .is("risk_amount", null)
+          .select("id"),
+      ),
+    );
+    completed += results.reduce((n, res) => n + (res.data?.length ?? 0), 0);
+  }
   // Die Chunks laufen nacheinander (siehe import-wizard), daher reicht Lesen + Schreiben
   const { error: countError } = await supabase
     .from("import_batches")
@@ -129,7 +154,7 @@ export async function importTradeChunk(input: {
     .eq("id", batch.id);
   if (countError) console.error("Import-Zähler nicht aktualisiert", countError);
 
-  return { imported, skipped };
+  return { imported, skipped, completed };
 }
 
 export async function finishImport() {

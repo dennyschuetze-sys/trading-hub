@@ -24,7 +24,7 @@ import { BROKER_TIME_ZONE } from "@/lib/time";
 import { ACCOUNT_TYPES, CURRENCIES, MARKETS, PHASES, formatDateTime, formatMoney, pnlClass, type Account } from "@/lib/trading";
 import { cn } from "@/lib/utils";
 import { createAccountFromForm } from "../accounts/actions";
-import { createImportBatch, findExistingExternalIds, finishImport, importTradeChunk } from "./actions";
+import { createImportBatch, findExistingExternalIds, finishImport, importTradeChunk, undoImport } from "./actions";
 
 type AccountOption = Pick<Account, "id" | "name" | "currency" | "platform">;
 
@@ -56,7 +56,7 @@ export function ImportWizard({ accounts }: { accounts: AccountOption[] }) {
     ids: Set<string>;
   } | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
-  const [done, setDone] = useState<{ imported: number; skipped: number; accountId: string } | null>(null);
+  const [done, setDone] = useState<{ imported: number; skipped: number; completed: number; accountId: string } | null>(null);
 
   const reset = () => {
     setResult(null);
@@ -106,6 +106,8 @@ export function ImportWizard({ accounts }: { accounts: AccountOption[] }) {
 
   const rows = useMemo(() => (result ? toImportRows(result.trades, timeZone) : []), [result, timeZone]);
   const newTrades = result ? result.trades.filter((t) => !existing.has(t.externalId)) : [];
+  // Vorhandene Trades, bei denen fehlende R-Werte ergänzt werden können
+  const completable = rows.filter((r) => r.risk_amount != null && existing.has(r.external_id)).length;
   const stats = useMemo(() => {
     if (!result?.trades.length) return null;
     const times = rows.map((r) => r.entry_time).sort();
@@ -134,15 +136,21 @@ export function ImportWizard({ accounts }: { accounts: AccountOption[] }) {
       });
       let imported = 0;
       let skipped = 0;
+      let completed = 0;
       for (let i = 0; i < rows.length; i += CHUNK) {
         const r = await importTradeChunk({ batchId, rows: rows.slice(i, i + CHUNK) });
         imported += r.imported;
         skipped += r.skipped;
+        completed += r.completed;
         setProgress(Math.min(100, Math.round(((i + CHUNK) / rows.length) * 100)));
       }
-      await finishImport();
-      setDone({ imported, skipped, accountId: targetAccountId });
-      toast.success(`${imported} Trades importiert`);
+      // Ohne neue Trades kein leerer Eintrag im Import-Verlauf
+      if (imported === 0) await undoImport(batchId);
+      else await finishImport();
+      setDone({ imported, skipped, completed, accountId: targetAccountId });
+      toast.success(
+        imported === 0 && completed > 0 ? `R-Werte für ${completed} Trades ergänzt` : `${imported} Trades importiert`,
+      );
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Import fehlgeschlagen");
@@ -336,6 +344,11 @@ export function ImportWizard({ accounts }: { accounts: AccountOption[] }) {
                     {done.imported} Trades importiert
                     {done.skipped > 0 && `, ${done.skipped} übersprungen (schon vorhanden)`}
                   </p>
+                  {done.completed > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Bei {done.completed} vorhandenen Trades wurden Risiko und ursprünglicher Stop Loss ergänzt.
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     <Button asChild>
                       <Link href={`/journal?account=${done.accountId}`}>Im Journal ansehen</Link>
@@ -366,17 +379,23 @@ export function ImportWizard({ accounts }: { accounts: AccountOption[] }) {
                   ) : (
                     accountId && (
                       <div className="flex flex-wrap items-center gap-3">
-                        <Button onClick={() => runImport(accountId)} disabled={importing || checking || newTrades.length === 0}>
+                        <Button
+                          onClick={() => runImport(accountId)}
+                          disabled={importing || checking || (newTrades.length === 0 && completable === 0)}
+                        >
                           {importing || checking ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
                           {checking
                             ? "Prüfe Duplikate …"
-                            : newTrades.length === 0
-                              ? "Alle Trades schon vorhanden"
-                              : `${newTrades.length} Trades importieren`}
+                            : newTrades.length > 0
+                              ? `${newTrades.length} Trades importieren`
+                              : completable > 0
+                                ? "Fehlende R-Werte ergänzen"
+                                : "Alle Trades schon vorhanden"}
                         </Button>
                         {existing.size > 0 && (
                           <span className="text-sm text-muted-foreground">
                             {existing.size} schon vorhanden, werden übersprungen
+                            {completable > 0 && " – fehlendes Risiko wird dort ergänzt"}
                           </span>
                         )}
                       </div>

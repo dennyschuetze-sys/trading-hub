@@ -161,7 +161,7 @@ export function TradeForm({
             <Field label="Swap" htmlFor="swap">
               <Input id="swap" name="swap" inputMode="decimal" defaultValue={num(t?.swap || null)} />
             </Field>
-            <Field label="Geplantes Risiko (Betrag)" htmlFor="risk_amount" hint="Verlust bei SL, Basis für das R-Multiple">
+            <Field label="Geplantes Risiko (Betrag)" htmlFor="risk_amount" hint="Verlust bei SL, Basis für das R-Multiple. Leer lassen: wird aus Einstieg, SL und P&L berechnet">
               <Input id="risk_amount" name="risk_amount" inputMode="decimal" defaultValue={num(t?.risk_amount)} />
             </Field>
           </FormSection>

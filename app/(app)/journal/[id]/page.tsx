@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteButton } from "@/components/forms/delete-button";
+import { plannedRewardRisk } from "@/lib/r-multiple";
 import { loadViolations } from "@/lib/risk-queries";
 import { VIOLATION_LABELS, type Violation } from "@/lib/risk-rules";
 import { berlinParts } from "@/lib/stats";
@@ -70,6 +71,7 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
   const currency = container?.currency ?? "USD";
   const isFutures = container?.market === "futures";
   const money = (v: number | null, signed = false) => formatMoney(v, currency, signed);
+  const plannedRR = plannedRewardRisk(trade);
 
   const details: [string, React.ReactNode][] = [
     session ? ["Backtest", session.name] : ["Account", trade.accounts?.name],
@@ -80,6 +82,7 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
     ["Ausstiegskurs", formatNumber(trade.exit_price)],
     ["Stop Loss", formatNumber(trade.stop_loss)],
     ["Take Profit", formatNumber(trade.take_profit)],
+    ["Geplantes CRV", plannedRR == null ? "–" : `1 : ${formatNumber(plannedRR)}`],
     ["P&L brutto", money(trade.pnl, true)],
     ["Kommission", money(trade.commission)],
     ["Swap", money(trade.swap)],

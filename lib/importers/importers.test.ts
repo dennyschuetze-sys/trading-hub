@@ -50,6 +50,16 @@ describe("MetaTrader 5", () => {
     expect(result.trades[2]).toMatchObject({ stopLoss: null, takeProfit: null, direction: "long" });
   });
 
+  it("nimmt den ursprünglichen SL aus den Orders und berechnet daraus das Risiko", () => {
+    // Position 1001: SL später auf 4056.01 nachgezogen, platziert mit 4065.28
+    expect(result.trades[0].stopLoss).toBe(4065.28);
+    const [trailed, noOrder] = toImportRows(result.trades, BROKER_TIME_ZONE);
+    // 25,20 € für 3,21 Punkte → 5,99 Punkte SL-Abstand ≈ 47,02 €
+    expect(trailed.risk_amount).toBe(47.02);
+    // 1002 ohne Order-Zeile: SL liegt über dem Einstieg (nachgezogen) → kein Risiko ableitbar
+    expect(noOrder.risk_amount).toBeNull();
+  });
+
   it("liest Kontodaten und Startkapital", () => {
     expect(result.meta).toEqual({
       accountName: "Demo Challenge 10k",

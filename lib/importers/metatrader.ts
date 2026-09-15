@@ -15,6 +15,7 @@ const isPlainNumber = (v: string | undefined) => cellNumber(v) != null;
  * Erkannt wird über die Form der Zeile, nicht über Überschriften – das funktioniert in jeder Sprache.
  */
 function parseMt5Positions(rows: Rows): ParsedTrade[] {
+  const initialStops = parseMt5OrderStops(rows);
   const trades: ParsedTrade[] = [];
   for (const r of rows) {
     const side = SIDES[cellText(r[3]).toLowerCase()];
@@ -36,8 +37,9 @@ function parseMt5Positions(rows: Rows): ParsedTrade[] {
       exitWall: parseIsoLikeWallTime(cellText(r[8])),
       quantity: cellNumber(r[4])!,
       entryPrice: cellNumber(r[5]),
-      stopLoss: cellNumber(r[6]),
-      takeProfit: cellNumber(r[7]),
+      // In „Positionen“ steht der zuletzt nachgezogene SL – für das Risiko zählt der ursprüngliche
+      stopLoss: initialStops.get(cellText(r[1])) ?? nonZero(cellNumber(r[6])),
+      takeProfit: nonZero(cellNumber(r[7])),
       exitPrice: cellNumber(r[9]),
       commission: cellNumber(r[10]) ?? 0,
       swap: cellNumber(r[11]) ?? 0,
@@ -45,6 +47,24 @@ function parseMt5Positions(rows: Rows): ParsedTrade[] {
     });
   }
   return trades;
+}
+
+/**
+ * Abschnitt „Orders“: Eröffnungszeit | Auftrag | Symbol | Typ | Volumen („0.09 / 0.09“) | Preis | S/L | T/P | …
+ * Die Auftragsnummer der Eröffnungsorder ist in MT5 zugleich die Positionsnummer.
+ * Liefert je Position den SL, mit dem die Order platziert wurde.
+ */
+function parseMt5OrderStops(rows: Rows): Map<string, number> {
+  const stops = new Map<string, number>();
+  for (const r of rows) {
+    if (!SIDES[cellText(r[3]).toLowerCase()] || !isDate(r[0]) || !isInteger(r[1]) || !/\S\s*\/\s*\S/.test(cellText(r[4]))) {
+      continue;
+    }
+    const stop = nonZero(cellNumber(r[6]));
+    // Nur die erste Order je Nummer (Eröffnung); Schließ-Orders haben eigene Nummern
+    if (stop != null && !stops.has(cellText(r[1]))) stops.set(cellText(r[1]), stop);
+  }
+  return stops;
 }
 
 /**
