@@ -132,17 +132,33 @@ const HOLD_BUCKETS: [string, string, number][] = [
   ["5", "> 1 Tag", Infinity],
 ];
 
-const R_BUCKETS: [string, number][] = [
-  ["≤ −2 R", -2],
-  ["−2 bis −1 R", -1],
-  ["−1 bis 0 R", 0],
-  ["0 bis 1 R", 1],
-  ["1 bis 2 R", 2],
-  ["2 bis 3 R", 3],
-  ["> 3 R", Infinity],
-];
+/** Ränder der R-Verteilung: kleinere bzw. größere Werte landen im ersten/letzten Balken. */
+const R_MIN = -5;
+const R_MAX = 20;
 
 export type RBucket = { label: string; count: number; positive: boolean };
+
+/**
+ * R-Verteilung in 1-R-Schritten (−1 bis 0, 0 bis 1, …), so weit wie die Ergebnisse tatsächlich reichen.
+ * Mindestens −2 bis +3 R, damit wenige Trades nicht verloren wirken; Ausreißer jenseits −5/+20 R werden zusammengefasst.
+ */
+export function rDistribution(rs: number[]): RBucket[] {
+  const fmt = (n: number) => String(n).replace("-", "−");
+  // Balken mit Obergrenze u umfasst (u − 1, u]
+  const upperOf = (r: number) => Math.min(R_MAX + 1, Math.max(R_MIN, Math.ceil(r)));
+  const low = Math.min(-1, ...rs.map(upperOf));
+  const high = Math.max(3, ...rs.map(upperOf));
+  const counts = new Map<number, number>();
+  for (const r of rs) counts.set(upperOf(r), (counts.get(upperOf(r)) ?? 0) + 1);
+
+  const buckets: RBucket[] = [];
+  for (let u = low; u <= high; u++) {
+    const label =
+      u === R_MIN ? `≤ ${fmt(R_MIN)} R` : u === R_MAX + 1 ? `> ${R_MAX} R` : `${fmt(u - 1)} bis ${fmt(u)} R`;
+    buckets.push({ label, count: counts.get(u) ?? 0, positive: u > 0 });
+  }
+  return buckets;
+}
 
 export type AdvancedStats = {
   rBuckets: RBucket[];
@@ -169,10 +185,7 @@ export function advancedStats(input: AnalysisTrade[], riskPct: Map<string, numbe
   const trades = closedTrades(input);
 
   const rs = trades.map((t) => t.r_multiple).filter((r): r is number => r != null);
-  const rBuckets = R_BUCKETS.map(([label, upper], i) => {
-    const lower = i === 0 ? -Infinity : R_BUCKETS[i - 1][1];
-    return { label, count: rs.filter((r) => (i === 0 ? r <= upper : r > lower && r <= upper)).length, positive: upper > 0 };
-  });
+  const rBuckets = rDistribution(rs);
 
   const withMfe = trades.flatMap((t) => {
     const mfe = maxFavorableR(t);

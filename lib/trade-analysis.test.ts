@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DetailTrade } from "./stats";
-import { advancedStats, detailBreakdowns, revengeTrades, riskPercents, streakContext, tradeNumberOfDay } from "./trade-analysis";
+import { advancedStats, detailBreakdowns, rDistribution, revengeTrades, riskPercents, streakContext, tradeNumberOfDay } from "./trade-analysis";
 
 let seq = 0;
 function trade(entry: string, exit: string | null, net: number | null, extra: Partial<DetailTrade> = {}): DetailTrade {
@@ -112,6 +112,27 @@ describe("advancedStats", () => {
     expect(s.mfe.avgMfeR).toBeNull();
     expect(s.risk.avgPct).toBeNull();
     expect(s.stopBySymbol).toEqual([]);
+  });
+});
+
+describe("rDistribution", () => {
+  it("reicht bis zum höchsten R und fasst nur extreme Ausreißer zusammen", () => {
+    const buckets = rDistribution([-1.02, -0.5, 0.4, 5.13, 7.9]);
+    expect(buckets.map((b) => b.label)).toEqual([
+      "−2 bis −1 R",
+      "−1 bis 0 R",
+      "0 bis 1 R",
+      "1 bis 2 R",
+      "2 bis 3 R",
+      "3 bis 4 R",
+      "4 bis 5 R",
+      "5 bis 6 R",
+      "6 bis 7 R",
+      "7 bis 8 R",
+    ]);
+    expect(buckets.map((b) => b.count)).toEqual([1, 1, 1, 0, 0, 0, 0, 1, 0, 1]);
+    expect(rDistribution([-9, 30]).map((b) => b.label).at(0)).toBe("≤ −5 R");
+    expect(rDistribution([-9, 30]).map((b) => b.label).at(-1)).toBe("> 20 R");
   });
 });
 

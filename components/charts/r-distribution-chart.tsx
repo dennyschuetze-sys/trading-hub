@@ -24,7 +24,9 @@ export function RDistributionChart({ buckets, height = 220 }: { buckets: RBucket
             tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
-            interval={0}
+            // Bei vielen Balken Beschriftungen ausdünnen statt überlappen lassen
+            interval={buckets.length > 8 ? "preserveStartEnd" : 0}
+            minTickGap={8}
           />
           <YAxis
             allowDecimals={false}
