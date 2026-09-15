@@ -57,3 +57,13 @@ Einrichtung:
 4. In der App unter **Einstellungen** Telegram verbinden und eine Test-Nachricht senden.
 
 Testlauf ohne Versand: `GET /api/cron/notify?dry=1` mit Header `Authorization: Bearer <CRON_SECRET>`.
+
+## KI-Funktionen
+
+Auf Knopfdruck, mit Claude Opus 5 (`lib/ai/`), Ergebnisse werden in `ai_reports` gespeichert:
+
+- **KI-Briefing** (News & Kalender): Zusammenfassung der Meldungen der letzten 24 Stunden und der Termine für die eigenen Währungen.
+- **KI-Wochen-/Monatsanalyse** (Ziele & Reviews): wiederkehrende Fehler, beste Setups, Regelverstöße und Fokus aus Trades, Notizen und Tages-Reviews.
+
+Benötigt `ANTHROPIC_API_KEY` in Vercel. Pro Tag bzw. Zeitraum höchstens 5 Neuerstellungen. Trade-Notizen und Reviews
+werden dafür an die Claude API übermittelt.

@@ -100,6 +100,36 @@ export type Database = {
           },
         ];
       };
+      ai_reports: {
+        Row: {
+          content: Json;
+          created_at: string;
+          generations: number;
+          id: string;
+          input_tokens: number;
+          kind: string;
+          model: string;
+          output_tokens: number;
+          period_key: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          content: Json;
+          created_at?: string;
+          generations?: number;
+          id?: string;
+          input_tokens?: number;
+          kind: string;
+          model: string;
+          output_tokens?: number;
+          period_key: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ai_reports"]["Insert"]>;
+        Relationships: [];
+      };
       account_costs: {
         Row: {
           account_id: string | null;

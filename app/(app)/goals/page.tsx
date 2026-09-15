@@ -4,7 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { shortDate } from "@/components/charts/format";
 import { StatTile } from "@/components/charts/stat-tile";
+import { AiReportCard } from "@/components/ai/ai-report-card";
+import { JournalAnalysisView } from "@/components/ai/journal-analysis-view";
 import { PageHeader } from "@/components/layout/page-header";
+import { aiConfigured } from "@/lib/ai/claude";
+import { MAX_GENERATIONS, loadReport } from "@/lib/ai/reports";
+import { JournalAnalysisSchema } from "@/lib/ai/schemas";
 import { isValidDate, todayBerlin } from "@/lib/daily-plan";
 import { buildIndex, computeStreaks, PARTS, scoreDays, type Streak } from "@/lib/discipline";
 import { evaluateGoal, formatMetric, summarizePeriod } from "@/lib/goals";
@@ -13,8 +18,12 @@ import { isPeriodType, PERIOD_TYPES, periodDays, periodLabel, periodStart, shift
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney, formatNumber, formatR, plural } from "@/lib/trading";
 import { cn } from "@/lib/utils";
+import { generateJournalAnalysis } from "./ai-actions";
 import { GoalList, type GoalRow } from "./goal-list";
 import { PeriodReviewForm } from "./period-review-form";
+
+// Die KI-Analyse kann bis zu einer Minute dauern
+export const maxDuration = 120;
 
 const weekdayFormatter = new Intl.DateTimeFormat("de-DE", { weekday: "short", timeZone: "UTC" });
 
@@ -48,6 +57,7 @@ export default async function GoalsPage({ searchParams }: PageProps<"/goals">) {
     supabase.from("accounts").select("id, name, currency, status").order("name"),
     supabase.from("strategies").select("id, name"),
   ]);
+  const analysis = await loadReport(supabase, type === "week" ? "journal_week" : "journal_month", start, JournalAnalysisSchema);
 
   const index = buildIndex(data);
   const days = periodDays(start, type);
@@ -221,6 +231,20 @@ export default async function GoalsPage({ searchParams }: PageProps<"/goals">) {
             </CardContent>
           </Card>
         </div>
+
+        {start <= today && (
+          <AiReportCard
+            title={type === "week" ? "KI-Wochenanalyse" : "KI-Monatsanalyse"}
+            intro="Claude sucht in Trades, Notizen, Regelverstößen und Tages-Reviews nach wiederkehrenden Fehlern und deinen besten Setups."
+            configured={aiConfigured()}
+            updatedAt={analysis.report?.updatedAt ?? null}
+            remaining={MAX_GENERATIONS - analysis.generations}
+            action={generateJournalAnalysis.bind(null, type, start)}
+            buttonLabel="Analyse erstellen"
+          >
+            {analysis.report && <JournalAnalysisView analysis={analysis.report.data} />}
+          </AiReportCard>
+        )}
 
         <Card>
           <CardHeader>

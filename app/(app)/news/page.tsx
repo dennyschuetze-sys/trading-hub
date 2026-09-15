@@ -1,23 +1,34 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AiReportCard } from "@/components/ai/ai-report-card";
+import { NewsBriefingView } from "@/components/ai/news-briefing-view";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EventList } from "@/components/news/event-list";
 import { PageHeader } from "@/components/layout/page-header";
 import { berlinDay, currenciesForSymbol, filterEvents, nextEvent, relativeTime } from "@/lib/calendar";
+import { aiConfigured } from "@/lib/ai/claude";
+import { MAX_GENERATIONS, loadReport } from "@/lib/ai/reports";
+import { NewsBriefingSchema } from "@/lib/ai/schemas";
+import { todayBerlin } from "@/lib/daily-plan";
 import { getCalendar, getNews, getNewsSettings } from "@/lib/feeds";
 import { rememberEvents } from "@/lib/risk-queries";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/trading";
 import { CalendarFilters } from "./calendar-filters";
 import { NewsFeed } from "./news-feed";
+import { generateNewsBriefing } from "./ai-actions";
 import { TradingViewCalendar } from "./tradingview-calendar";
+
+// Das KI-Briefing kann bis zu einer Minute dauern
+export const maxDuration = 120;
 
 export default async function NewsPage() {
   const supabase = await createClient();
   const settings = await getNewsSettings(supabase);
-  const [calendar, news, { data: symbols }] = await Promise.all([
+  const [calendar, news, { data: symbols }, briefing] = await Promise.all([
     getCalendar(),
     getNews(settings.newsSources),
     supabase.from("trades").select("symbol").eq("is_backtest", false).limit(1000),
+    loadReport(supabase, "news_daily", todayBerlin(), NewsBriefingSchema),
   ]);
   await rememberEvents(supabase, calendar.events);
 
@@ -33,6 +44,20 @@ export default async function NewsPage() {
   return (
     <>
       <PageHeader title="News & Kalender" description="Wirtschaftstermine und Marktmeldungen für deine Märkte" />
+
+      <div className="mb-6">
+        <AiReportCard
+          title="KI-Briefing für heute"
+          intro="Claude fasst die Meldungen der letzten 24 Stunden und die Termine für deine Währungen zusammen."
+          configured={aiConfigured()}
+          updatedAt={briefing.report?.updatedAt ?? null}
+          remaining={MAX_GENERATIONS - briefing.generations}
+          action={generateNewsBriefing}
+          buttonLabel="Briefing erstellen"
+        >
+          {briefing.report && <NewsBriefingView briefing={briefing.report.data} />}
+        </AiReportCard>
+      </div>
 
       <Tabs defaultValue="calendar" className="gap-4">
         <TabsList>
