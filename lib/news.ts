@@ -1,7 +1,8 @@
-export type NewsSource = { id: string; name: string; url: string; topic: string };
+/** `defaultOn: false` = nicht vorausgewählt, z. B. weil die Quelle Abrufe von Vercel blockiert */
+export type NewsSource = { id: string; name: string; url: string; topic: string; defaultOn?: boolean };
 
 export const NEWS_SOURCES: NewsSource[] = [
-  { id: "fxstreet", name: "FXStreet", url: "https://www.fxstreet.com/rss/news", topic: "Forex & Gold" },
+  { id: "fxstreet", name: "FXStreet", url: "https://www.fxstreet.com/rss/news", topic: "Forex & Gold · blockt Abrufe vom Server oft", defaultOn: false },
   { id: "investinglive", name: "investingLive", url: "https://investinglive.com/feed/news", topic: "Schnelle Marktmeldungen" },
   { id: "investing_fx", name: "Investing.com", url: "https://www.investing.com/rss/news_1.rss", topic: "Forex-News" },
   { id: "investing_commodities", name: "Investing.com Rohstoffe", url: "https://www.investing.com/rss/news_11.rss", topic: "Gold, Öl & Rohstoffe" },

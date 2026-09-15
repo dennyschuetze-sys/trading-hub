@@ -72,7 +72,7 @@ export type NewsSettings = { calendarCurrencies: string[]; minImpact: "low" | "m
 export const DEFAULT_SETTINGS: NewsSettings = {
   calendarCurrencies: ["USD", "EUR"],
   minImpact: "medium",
-  newsSources: NEWS_SOURCES.map((s) => s.id),
+  newsSources: NEWS_SOURCES.filter((s) => s.defaultOn !== false).map((s) => s.id),
 };
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
