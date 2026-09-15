@@ -17,6 +17,7 @@ import { saveTrade } from "./actions";
 import { StrategyChecklist, type StrategyOption } from "./strategy-checklist";
 
 type AccountOption = Pick<Account, "id" | "name" | "market">;
+type BacktestSessionOption = { id: string; name: string; market: string; strategy_id: string | null; symbols: string[] };
 
 export function TradeForm({
   accounts,
@@ -24,12 +25,15 @@ export function TradeForm({
   trade,
   checkedItems = [],
   defaultAccountId,
+  backtestSession,
 }: {
   accounts: AccountOption[];
   strategies: StrategyOption[];
   trade?: Trade;
   checkedItems?: string[];
   defaultAccountId?: string;
+  /** Gesetzt = Backtest-Trade dieser Session statt Live-Trade eines Accounts */
+  backtestSession?: BacktestSessionOption;
 }) {
   // Zeiten aus dem Browser (lokale Zeitzone) als eindeutige UTC-Zeit an den Server schicken
   const { state, onSubmit, pending } = useFormAction(saveTrade.bind(null, trade?.id ?? null), (formData) => {
@@ -42,7 +46,7 @@ export function TradeForm({
   const [status, setStatus] = useState(trade?.status ?? "closed");
   const [accountId, setAccountId] = useState(trade?.account_id ?? defaultAccountId ?? accounts[0]?.id);
   const [now] = useState(() => new Date().toISOString());
-  const isFutures = accounts.find((a) => a.id === accountId)?.market === "futures";
+  const isFutures = (backtestSession?.market ?? accounts.find((a) => a.id === accountId)?.market) === "futures";
   const t = trade;
 
   const num = (v: number | null | undefined) => (v == null ? "" : String(v));
@@ -52,17 +56,30 @@ export function TradeForm({
       <CardContent>
         <form onSubmit={onSubmit} className="grid gap-8">
           <FormSection title="Trade">
-            <Field label="Account *" htmlFor="account_id">
-              <SelectField
-                id="account_id"
-                options={accounts.map((a) => ({ value: a.id, label: a.name }))}
-                value={accountId}
-                onChange={(e) => setAccountId(e.target.value)}
+            {backtestSession ? (
+              <Field label="Backtest-Session" htmlFor="backtest_session_name">
+                <input type="hidden" name="backtest_session_id" value={backtestSession.id} />
+                <Input id="backtest_session_name" value={backtestSession.name} readOnly aria-readonly />
+              </Field>
+            ) : (
+              <Field label="Account *" htmlFor="account_id">
+                <SelectField
+                  id="account_id"
+                  options={accounts.map((a) => ({ value: a.id, label: a.name }))}
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value)}
+                  required
+                />
+              </Field>
+            )}
+            <Field label="Symbol *" htmlFor="symbol" hint={isFutures ? "z. B. NQ, ES, MNQ, GC" : "z. B. EURUSD, XAUUSD, US30"}>
+              <Input
+                id="symbol"
+                name="symbol"
+                defaultValue={t?.symbol ?? (backtestSession?.symbols.length === 1 ? backtestSession.symbols[0] : undefined)}
+                className="uppercase"
                 required
               />
-            </Field>
-            <Field label="Symbol *" htmlFor="symbol" hint={isFutures ? "z. B. NQ, ES, MNQ, GC" : "z. B. EURUSD, XAUUSD, US30"}>
-              <Input id="symbol" name="symbol" defaultValue={t?.symbol} className="uppercase" required />
             </Field>
             <Field label="Richtung" htmlFor="direction">
               <input type="hidden" name="direction" value={direction} />
@@ -156,7 +173,11 @@ export function TradeForm({
               <h2 className="font-medium">Strategie</h2>
               <p className="text-sm text-muted-foreground">Welches Setup war das – und hast du dich an die Checkliste gehalten?</p>
             </div>
-            <StrategyChecklist strategies={strategies} defaultStrategyId={t?.strategy_id} defaultChecked={checkedItems} />
+            <StrategyChecklist
+              strategies={strategies}
+              defaultStrategyId={t ? t.strategy_id : backtestSession?.strategy_id}
+              defaultChecked={checkedItems}
+            />
           </section>
 
           <Separator />
@@ -215,7 +236,7 @@ export function TradeForm({
               {pending ? "Speichern …" : "Speichern"}
             </Button>
             <Button variant="ghost" asChild>
-              <Link href={t ? `/journal/${t.id}` : "/journal"}>Abbrechen</Link>
+              <Link href={t ? `/journal/${t.id}` : backtestSession ? `/backtesting/${backtestSession.id}` : "/journal"}>Abbrechen</Link>
             </Button>
           </div>
         </form>

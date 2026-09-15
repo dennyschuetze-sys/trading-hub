@@ -15,6 +15,14 @@ export default async function EditTradePage({ params }: PageProps<"/journal/[id]
   ]);
   if (!trade) notFound();
 
+  const { data: backtestSession } = trade.backtest_session_id
+    ? await supabase
+        .from("backtest_sessions")
+        .select("id, name, market, strategy_id, symbols")
+        .eq("id", trade.backtest_session_id)
+        .maybeSingle()
+    : { data: null };
+
   return (
     <>
       <PageHeader title={`${trade.symbol} bearbeiten`} />
@@ -23,6 +31,7 @@ export default async function EditTradePage({ params }: PageProps<"/journal/[id]
         strategies={strategies}
         trade={trade}
         checkedItems={(results ?? []).map((r) => r.item_id)}
+        backtestSession={backtestSession ?? undefined}
       />
     </>
   );

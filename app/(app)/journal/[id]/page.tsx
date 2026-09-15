@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Pencil, ShieldAlert, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FlaskConical, Pencil, ShieldAlert, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteButton } from "@/components/forms/delete-button";
 import { loadViolations } from "@/lib/risk-queries";
-import { VIOLATION_LABELS } from "@/lib/risk-rules";
+import { VIOLATION_LABELS, type Violation } from "@/lib/risk-rules";
 import { berlinParts } from "@/lib/stats";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -27,7 +27,11 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
   const supabase = await createClient();
 
   const [{ data: trade }, { data: shots }, { data: auth }, { data: checklistResults }] = await Promise.all([
-    supabase.from("trades").select("*, accounts(name, currency, market), strategies(id, name)").eq("id", id).maybeSingle(),
+    supabase
+      .from("trades")
+      .select("*, accounts(name, currency, market), backtest_sessions(id, name, currency, market), strategies(id, name)")
+      .eq("id", id)
+      .maybeSingle(),
     supabase.from("trade_screenshots").select("id, storage_path").eq("trade_id", id).order("created_at"),
     supabase.auth.getUser(),
     supabase
@@ -37,11 +41,15 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
   ]);
   if (!trade || !auth.user) notFound();
 
+  // Regeln gelten nur für Live-Trades
+  const session = trade.backtest_sessions;
   const day = berlinParts(trade.entry_time).date;
-  const { violations } = await loadViolations(supabase, {
-    entryFrom: dayBoundary(day, "start"),
-    entryTo: dayBoundary(day, "end"),
-  });
+  const { violations } = session
+    ? { violations: new Map<string, Violation[]>() }
+    : await loadViolations(supabase, {
+        entryFrom: dayBoundary(day, "start"),
+        entryTo: dayBoundary(day, "end"),
+      });
   const tradeViolations = violations.get(trade.id) ?? [];
 
   const checklist = (checklistResults ?? [])
@@ -58,12 +66,13 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
     signed?.[i]?.signedUrl ? [{ id: s.id, url: signed[i].signedUrl }] : [],
   );
 
-  const currency = trade.accounts?.currency ?? "USD";
-  const isFutures = trade.accounts?.market === "futures";
+  const container = trade.accounts ?? session;
+  const currency = container?.currency ?? "USD";
+  const isFutures = container?.market === "futures";
   const money = (v: number | null, signed = false) => formatMoney(v, currency, signed);
 
   const details: [string, React.ReactNode][] = [
-    ["Account", trade.accounts?.name],
+    session ? ["Backtest", session.name] : ["Account", trade.accounts?.name],
     ["Einstieg", formatDateTime(trade.entry_time)],
     ["Ausstieg", formatDateTime(trade.exit_time)],
     [isFutures ? "Kontrakte" : "Lots", formatNumber(trade.quantity, 4)],
@@ -86,8 +95,11 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
     <div className="grid gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="grid gap-2">
-          <Link href="/journal" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-4" /> Journal
+          <Link
+            href={session ? `/backtesting/${session.id}` : "/journal"}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" /> {session ? session.name : "Journal"}
           </Link>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">{trade.symbol}</h1>
@@ -95,6 +107,11 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
               {trade.direction === "long" ? "Long" : "Short"}
             </Badge>
             {trade.status === "open" && <Badge variant="outline">Offen</Badge>}
+            {session && (
+              <Badge variant="secondary">
+                <FlaskConical aria-hidden /> Backtest
+              </Badge>
+            )}
           </div>
           <div className="flex items-baseline gap-3">
             <span className={`text-3xl font-semibold tabular-nums ${pnlClass(trade.net_pnl)}`}>

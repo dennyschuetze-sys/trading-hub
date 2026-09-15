@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckSquare, FileText, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, CheckSquare, FileText, FlaskConical, Pencil, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,11 +24,12 @@ export default async function StrategyPage({ params, searchParams }: PageProps<"
   const { data: strategy } = await supabase.from("strategies").select("*").eq("id", id).maybeSingle();
   if (!strategy) notFound();
 
-  const [{ data: checklist }, { data: notes }, { data: accounts }, allTrades] = await Promise.all([
+  const [{ data: checklist }, { data: notes }, { data: accounts }, allTrades, { data: backtests }] = await Promise.all([
     supabase.from("strategy_checklist_items").select("id, label").eq("strategy_id", id).order("position"),
     supabase.from("playbook_notes").select("id, title, content, updated_at").eq("strategy_id", id).order("updated_at", { ascending: false }),
     supabase.from("accounts").select("id, name, currency"),
     fetchStatTrades(supabase),
+    supabase.from("backtest_sessions").select("id, name, status, trades(count)").eq("strategy_id", id).order("updated_at", { ascending: false }),
   ]);
 
   const currencyOf = new Map((accounts ?? []).map((a) => [a.id, a.currency]));
@@ -255,6 +256,45 @@ export default async function StrategyPage({ params, searchParams }: PageProps<"
                 </ul>
               ) : (
                 <p className="text-sm text-muted-foreground">Noch keine Artikel zu dieser Strategie.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2">
+                  <FlaskConical className="size-4" /> Backtests
+                </CardTitle>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href={`/backtesting/new?strategy=${id}`}>
+                    <Plus className="size-4" /> Neu
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-3 text-sm">
+              {backtests?.length ? (
+                <>
+                  <ul className="grid gap-2">
+                    {backtests.map((b) => (
+                      <li key={b.id}>
+                        <Link href={`/backtesting/${b.id}`} className="flex items-baseline justify-between gap-2 hover:underline">
+                          <span className="truncate font-medium">{b.name}</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {plural(b.trades[0]?.count ?? 0, "Trade", "Trades")}
+                            {b.status === "done" && " · fertig"}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href="/backtesting/compare" className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">
+                    Mit Live-Trades vergleichen
+                  </Link>
+                </>
+              ) : (
+                <p className="text-muted-foreground">Noch kein Backtest zu dieser Strategie.</p>
               )}
             </CardContent>
           </Card>

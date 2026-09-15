@@ -35,8 +35,13 @@ function parseTrade(formData: FormData): TablesInsert<"trades"> {
     .map((t) => t.trim())
     .filter(Boolean);
 
+  // Backtest-Trades gehören zu einer Session statt zu einem Account
+  const backtestSessionId = text(formData, "backtest_session_id");
+
   return {
-    account_id: requiredText(formData, "account_id", "Account"),
+    account_id: backtestSessionId ? null : requiredText(formData, "account_id", "Account"),
+    backtest_session_id: backtestSessionId,
+    is_backtest: backtestSessionId != null,
     symbol: requiredText(formData, "symbol", "Symbol").toUpperCase(),
     direction: requiredText(formData, "direction", "Richtung"),
     status,
@@ -127,6 +132,7 @@ export async function saveTrade(
   revalidatePath("/journal");
   revalidatePath("/accounts");
   revalidatePath("/strategies");
+  revalidatePath("/backtesting", "layout");
   redirect(`/journal/${data.id}`);
 }
 
@@ -179,11 +185,20 @@ export async function deleteTrade(tradeId: string) {
   const paths = (shots ?? []).map((s) => s.storage_path);
   if (paths.length) await supabase.storage.from("screenshots").remove(paths);
 
-  const { error } = await supabase.from("trades").delete().eq("id", tradeId);
+  const { data: trade, error } = await supabase
+    .from("trades")
+    .delete()
+    .eq("id", tradeId)
+    .select("backtest_session_id")
+    .maybeSingle();
   if (error) throw new Error(error.message);
 
   revalidatePath("/journal");
   revalidatePath("/accounts");
+  if (trade?.backtest_session_id) {
+    revalidatePath("/backtesting", "layout");
+    redirect(`/backtesting/${trade.backtest_session_id}`);
+  }
   redirect("/journal");
 }
 

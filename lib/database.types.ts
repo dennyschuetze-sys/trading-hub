@@ -54,6 +54,52 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["accounts"]["Insert"]>;
         Relationships: [];
       };
+      backtest_sessions: {
+        Row: {
+          created_at: string;
+          currency: string;
+          id: string;
+          market: string;
+          name: string;
+          notes: string | null;
+          period_from: string | null;
+          period_to: string | null;
+          starting_balance: number | null;
+          status: string;
+          strategy_id: string | null;
+          symbols: string[];
+          timeframe: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          currency?: string;
+          id?: string;
+          market?: string;
+          name: string;
+          notes?: string | null;
+          period_from?: string | null;
+          period_to?: string | null;
+          starting_balance?: number | null;
+          status?: string;
+          strategy_id?: string | null;
+          symbols?: string[];
+          timeframe?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["backtest_sessions"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "backtest_sessions_strategy_id_fkey";
+            columns: ["strategy_id"];
+            isOneToOne: false;
+            referencedRelation: "strategies";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       calendar_history: {
         Row: {
           created_at: string;
@@ -430,7 +476,8 @@ export type Database = {
       };
       trades: {
         Row: {
-          account_id: string;
+          account_id: string | null;
+          backtest_session_id: string | null;
           commission: number;
           created_at: string;
           direction: string;
@@ -467,7 +514,8 @@ export type Database = {
           user_id: string;
         };
         Insert: {
-          account_id: string;
+          account_id?: string | null;
+          backtest_session_id?: string | null;
           commission?: number;
           created_at?: string;
           direction: string;
@@ -508,6 +556,13 @@ export type Database = {
             columns: ["account_id"];
             isOneToOne: false;
             referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "trades_backtest_session_id_fkey";
+            columns: ["backtest_session_id"];
+            isOneToOne: false;
+            referencedRelation: "backtest_sessions";
             referencedColumns: ["id"];
           },
           {

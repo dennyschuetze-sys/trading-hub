@@ -1,10 +1,9 @@
 import { TIME_ZONE, labelFor, SESSIONS, type Trade } from "@/lib/trading";
 
-/** Felder, die für Auswertungen gebraucht werden. */
-export type StatTrade = Pick<
+/** Felder, die für Auswertungen gebraucht werden – für Live- und Backtest-Trades. */
+export type CoreTrade = Pick<
   Trade,
   | "id"
-  | "account_id"
   | "symbol"
   | "direction"
   | "status"
@@ -20,6 +19,9 @@ export type StatTrade = Pick<
   | "strategy_id"
   | "risk_amount"
 >;
+
+/** Live-Trade: gehört immer zu einem Account. */
+export type StatTrade = CoreTrade & { account_id: string };
 
 // Zeit in Berliner Zeit -----------------------------------------------------------
 
@@ -45,9 +47,9 @@ export function berlinParts(iso: string) {
 }
 
 /** Zeitpunkt, an dem das Ergebnis realisiert wurde. */
-export const closeTime = (t: Pick<StatTrade, "exit_time" | "entry_time">) => t.exit_time ?? t.entry_time;
+export const closeTime = (t: Pick<CoreTrade, "exit_time" | "entry_time">) => t.exit_time ?? t.entry_time;
 
-export function closedTrades<T extends StatTrade>(trades: T[]): T[] {
+export function closedTrades<T extends CoreTrade>(trades: T[]): T[] {
   return trades
     .filter((t) => t.status === "closed" && t.net_pnl != null)
     .sort((a, b) => closeTime(a).localeCompare(closeTime(b)));
@@ -81,7 +83,7 @@ export type Summary = {
   avgHoldMinutes: number | null;
 };
 
-export function summarize(input: StatTrade[]): Summary {
+export function summarize(input: CoreTrade[]): Summary {
   const trades = closedTrades(input);
   const pnls = trades.map((t) => t.net_pnl!);
   const winsList = pnls.filter((p) => p > 0);
@@ -133,7 +135,7 @@ export function summarize(input: StatTrade[]): Summary {
 
 export type EquityPoint = { time: string; balance: number; pnl: number; tradeId: string | null };
 
-export function equityCurve(input: StatTrade[], startingBalance: number): EquityPoint[] {
+export function equityCurve(input: CoreTrade[], startingBalance: number): EquityPoint[] {
   const trades = closedTrades(input);
   const points: EquityPoint[] = [];
   let balance = startingBalance;
@@ -165,7 +167,7 @@ export function maxDrawdown(points: Pick<EquityPoint, "balance">[]) {
 
 export type DayResult = { date: string; pnl: number; count: number; wins: number };
 
-export function dailyResults(input: StatTrade[]): DayResult[] {
+export function dailyResults(input: CoreTrade[]): DayResult[] {
   const days = new Map<string, DayResult>();
   for (const t of closedTrades(input)) {
     const date = berlinParts(closeTime(t)).date;
@@ -190,13 +192,13 @@ export type BreakdownRow = {
   avgR: number | null;
 };
 
-export function breakdown(
-  input: StatTrade[],
-  keyOf: (t: StatTrade) => string | string[] | null,
+export function breakdown<T extends CoreTrade>(
+  input: T[],
+  keyOf: (t: T) => string | string[] | null,
   labelOf: (key: string) => string = (k) => k,
   order?: string[],
 ): BreakdownRow[] {
-  const groups = new Map<string, StatTrade[]>();
+  const groups = new Map<string, T[]>();
   for (const t of closedTrades(input)) {
     const raw = keyOf(t);
     const keys = raw == null ? [] : Array.isArray(raw) ? raw : [raw];
@@ -228,7 +230,7 @@ export type ChecklistResult = { trade_id: string; item_id: string; checked: bool
  * Außerdem je Checklistenpunkt, was passiert, wenn er NICHT erfüllt war.
  */
 export function checklistBreakdowns(
-  trades: StatTrade[],
+  trades: CoreTrade[],
   items: { id: string; label: string }[],
   results: ChecklistResult[],
 ) {
@@ -260,7 +262,7 @@ export function checklistBreakdowns(
 const WEEKDAY_LABELS =["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
 
 /** Die Standard-Auswertungen für die Statistikseite. */
-export function standardBreakdowns(trades: StatTrade[], strategyNames: Map<string, string> = new Map()) {
+export function standardBreakdowns(trades: CoreTrade[], strategyNames: Map<string, string> = new Map()) {
   return {
     strategy: breakdown(
       trades,
