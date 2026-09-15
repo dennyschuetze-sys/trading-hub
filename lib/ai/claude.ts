@@ -8,7 +8,11 @@ export const AI_MODEL = "claude-opus-5";
 export const aiConfigured = () => Boolean(process.env.ANTHROPIC_API_KEY);
 
 let client: Anthropic | null = null;
-const getClient = () => (client ??= new Anthropic());
+// Schlüssel ohne festen Workspace brauchen die Workspace-ID als Header
+const getClient = () =>
+  (client ??= new Anthropic(
+    process.env.ANTHROPIC_WORKSPACE_ID ? { defaultHeaders: { "anthropic-workspace-id": process.env.ANTHROPIC_WORKSPACE_ID } } : {},
+  ));
 
 export class AiError extends Error {}
 
