@@ -42,3 +42,18 @@ Jeder Benutzer sieht ausschließlich seine eigenen Daten.
 Hosting auf Vercel (Hobby-Tarif), verbunden mit dem GitHub-Repository: Jeder Push auf `main` wird automatisch veröffentlicht.
 In Supabase müssen unter **Authentication → URL Configuration** die Vercel-Adresse als Site URL und
 `https://<adresse>/auth/callback` als Redirect URL eingetragen sein.
+
+## Telegram-Benachrichtigungen
+
+Supabase Cron ruft alle 5 Minuten `/api/cron/notify` auf. Die Route prüft News-Termine, fehlende Tagespläne und
+Reviews sowie die Prop-Firm-Limits und schickt fällige Nachrichten über den Telegram-Bot. Ein Versandprotokoll
+(`notification_log`) verhindert doppelte Nachrichten.
+
+Einrichtung:
+
+1. In Telegram mit **@BotFather** einen Bot anlegen (`/newbot`) und den Token kopieren.
+2. In Vercel (und lokal in `.env.local`) `TELEGRAM_BOT_TOKEN`, `SUPABASE_SECRET_KEY` und `CRON_SECRET` eintragen, danach neu deployen.
+3. `supabase/cron-notify.sql` mit der Vercel-Adresse und dem `CRON_SECRET` im Supabase SQL Editor ausführen.
+4. In der App unter **Einstellungen** Telegram verbinden und eine Test-Nachricht senden.
+
+Testlauf ohne Versand: `GET /api/cron/notify?dry=1` mit Header `Authorization: Bearer <CRON_SECRET>`.

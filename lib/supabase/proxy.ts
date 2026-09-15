@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth"];
+// /api/cron schützt sich selbst per CRON_SECRET
+const PUBLIC_PATHS = ["/login", "/auth", "/api/cron"];
 
 /** Erneuert die Supabase-Session und leitet nicht eingeloggte Besucher zum Login. */
 export async function updateSession(request: NextRequest) {

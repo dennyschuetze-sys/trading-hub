@@ -100,6 +100,132 @@ export type Database = {
           },
         ];
       };
+      account_costs: {
+        Row: {
+          account_id: string | null;
+          amount: number;
+          created_at: string;
+          currency: string;
+          firm: string;
+          id: string;
+          incurred_on: string;
+          kind: string;
+          note: string | null;
+          user_id: string;
+        };
+        Insert: {
+          account_id?: string | null;
+          amount: number;
+          created_at?: string;
+          currency?: string;
+          firm: string;
+          id?: string;
+          incurred_on?: string;
+          kind: string;
+          note?: string | null;
+          user_id?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["account_costs"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "account_costs_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payouts: {
+        Row: {
+          account_id: string | null;
+          amount: number;
+          created_at: string;
+          currency: string;
+          firm: string;
+          id: string;
+          note: string | null;
+          paid_on: string;
+          user_id: string;
+        };
+        Insert: {
+          account_id?: string | null;
+          amount: number;
+          created_at?: string;
+          currency?: string;
+          firm: string;
+          id?: string;
+          note?: string | null;
+          paid_on?: string;
+          user_id?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["payouts"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "payouts_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notification_settings: {
+        Row: {
+          created_at: string;
+          drawdown_enabled: boolean;
+          drawdown_threshold: number;
+          journal_enabled: boolean;
+          journal_time: string;
+          link_code: string | null;
+          link_code_expires_at: string | null;
+          news_enabled: boolean;
+          news_minutes: number;
+          plan_enabled: boolean;
+          plan_time: string;
+          telegram_chat_id: number | null;
+          telegram_linked_at: string | null;
+          updated_at: string;
+          user_id: string;
+          weekdays_only: boolean;
+        };
+        Insert: {
+          created_at?: string;
+          drawdown_enabled?: boolean;
+          drawdown_threshold?: number;
+          journal_enabled?: boolean;
+          journal_time?: string;
+          link_code?: string | null;
+          link_code_expires_at?: string | null;
+          news_enabled?: boolean;
+          news_minutes?: number;
+          plan_enabled?: boolean;
+          plan_time?: string;
+          telegram_chat_id?: number | null;
+          telegram_linked_at?: string | null;
+          updated_at?: string;
+          user_id?: string;
+          weekdays_only?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["notification_settings"]["Insert"]>;
+        Relationships: [];
+      };
+      notification_log: {
+        Row: {
+          kind: string;
+          ref: string;
+          sent_at: string;
+          user_id: string;
+        };
+        Insert: {
+          kind: string;
+          ref: string;
+          sent_at?: string;
+          user_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["notification_log"]["Insert"]>;
+        Relationships: [];
+      };
       calendar_history: {
         Row: {
           created_at: string;

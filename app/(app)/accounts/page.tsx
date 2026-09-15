@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Pencil, Plus, Wallet } from "lucide-react";
+import { Pencil, Plus, Receipt, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,11 +26,18 @@ export default async function AccountsPage() {
   return (
     <>
       <PageHeader title="Accounts" description="Deine Prop-Firm- und eigenen Konten mit ihren Regeln.">
-        <Button asChild>
-          <Link href="/accounts/new">
-            <Plus className="size-4" /> Neuer Account
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/accounts/costs">
+              <Receipt className="size-4" /> Kosten & Auszahlungen
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/accounts/new">
+              <Plus className="size-4" /> Neuer Account
+            </Link>
+          </Button>
+        </div>
       </PageHeader>
 
       {!accounts?.length ? (
