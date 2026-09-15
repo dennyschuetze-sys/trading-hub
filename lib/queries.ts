@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import type { CoreTrade, StatTrade } from "@/lib/stats";
+import type { CoreTrade, DetailTrade, StatTrade, TradeDetails } from "@/lib/stats";
 
 const STAT_COLUMNS =
   "id, account_id, symbol, direction, status, entry_time, exit_time, net_pnl, r_multiple, session, setup_quality, emotion, mistakes, followed_plan, strategy_id, risk_amount";
@@ -39,12 +39,32 @@ export async function fetchStatTrades(
   return all;
 }
 
-export type BacktestTrade = CoreTrade & { backtest_session_id: string };
+const DETAIL_COLUMNS = `${STAT_COLUMNS}, entry_price, exit_price, stop_loss, take_profit, best_price, worst_price, pnl, commission, swap, entry_timeframe, htf_bias, market_context, moved_to_breakeven, partial_close`;
+
+/** Alle Live-Trades mit Kursen und Setup-Kontext für die Statistikseite – seitenweise wie fetchStatTrades. */
+export async function fetchDetailTrades(supabase: Supabase): Promise<DetailTrade[]> {
+  const all: DetailTrade[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("trades")
+      .select(DETAIL_COLUMNS)
+      .eq("is_backtest", false)
+      .order("entry_time", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    all.push(...(data as unknown as DetailTrade[]));
+    if (data.length < PAGE) break;
+  }
+  return all;
+}
+
+export type BacktestTrade = CoreTrade & TradeDetails & { backtest_session_id: string };
 
 /** Backtest-Trades, optional nur bestimmter Sessions – seitenweise wie fetchStatTrades. */
 export async function fetchBacktestTrades(supabase: Supabase, sessionIds?: string[]): Promise<BacktestTrade[]> {
   if (sessionIds && sessionIds.length === 0) return [];
-  const columns = STAT_COLUMNS.replace("account_id", "backtest_session_id");
+  const columns = DETAIL_COLUMNS.replace("account_id", "backtest_session_id");
   const all: BacktestTrade[] = [];
   for (let from = 0; ; from += PAGE) {
     let query = supabase

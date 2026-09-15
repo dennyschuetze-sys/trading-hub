@@ -29,6 +29,8 @@ export type JournalRow = {
   currency: string;
   strategyName: string | null;
   screenshots: number;
+  /** SL-Abstand, z. B. „15,2 Pips“ */
+  stopSize: string | null;
   /** Verstöße gegen persönliche Regeln (Beschreibungen) */
   violations: string[];
 };
@@ -128,6 +130,7 @@ export function JournalTable({ rows, strategies }: { rows: JournalRow[]; strateg
                 <TableHead className="hidden md:table-cell">Account</TableHead>
                 <TableHead className="hidden xl:table-cell">Strategie</TableHead>
                 <TableHead className="hidden text-right md:table-cell">Menge</TableHead>
+                <TableHead className="hidden text-right lg:table-cell">SL</TableHead>
                 <TableHead className="text-right">Netto P&L</TableHead>
                 <TableHead className="text-right">R</TableHead>
                 <TableHead className="hidden lg:table-cell">Setup</TableHead>
@@ -168,6 +171,9 @@ export function JournalTable({ rows, strategies }: { rows: JournalRow[]; strateg
                   <TableCell className="hidden text-muted-foreground md:table-cell">{t.accountName}</TableCell>
                   <TableCell className="hidden max-w-40 truncate text-muted-foreground xl:table-cell">{t.strategyName ?? "–"}</TableCell>
                   <TableCell className="hidden text-right tabular-nums md:table-cell">{formatNumber(t.quantity, 4)}</TableCell>
+                  <TableCell className="hidden whitespace-nowrap text-right text-muted-foreground tabular-nums lg:table-cell">
+                    {t.stopSize ?? "–"}
+                  </TableCell>
                   <TableCell className={`text-right font-medium tabular-nums ${pnlClass(t.net_pnl)}`}>
                     {t.status === "open" ? "–" : formatMoney(t.net_pnl, t.currency, true)}
                   </TableCell>

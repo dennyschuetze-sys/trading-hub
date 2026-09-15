@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/forms/field";
 import { PageHeader } from "@/components/layout/page-header";
+import { formatStopSize, stopSize } from "@/lib/r-multiple";
 import { loadViolations } from "@/lib/risk-queries";
 import type { Violation } from "@/lib/risk-rules";
 import { berlinParts } from "@/lib/stats";
@@ -35,7 +36,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
 
   let query = supabase
     .from("trades")
-    .select("id, symbol, direction, status, entry_time, quantity, net_pnl, r_multiple, setup_quality, mistakes, account_id, accounts(name, currency), strategies(name), trade_screenshots(count)", {
+    .select("id, symbol, direction, status, entry_time, quantity, net_pnl, r_multiple, setup_quality, mistakes, account_id, entry_price, stop_loss, accounts(name, currency), strategies(name), trade_screenshots(count)", {
       count: "exact",
     })
     .eq("is_backtest", false)
@@ -174,6 +175,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
             currency: t.accounts?.currency ?? "USD",
             strategyName: t.strategies?.name ?? null,
             screenshots: t.trade_screenshots[0]?.count ?? 0,
+            stopSize: formatStopSize(stopSize(t)),
             violations: (violations.get(t.id) ?? []).map((v) => v.message),
           }))}
         />

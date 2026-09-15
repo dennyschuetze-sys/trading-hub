@@ -11,7 +11,9 @@ import { StatTile } from "@/components/charts/stat-tile";
 import { DeleteButton } from "@/components/forms/delete-button";
 import { BACKTEST_STATUSES, rStats } from "@/lib/backtests";
 import { fetchBacktestTrades } from "@/lib/queries";
+import { RDistributionChart } from "@/components/charts/r-distribution-chart";
 import { equityCurve, maxDrawdown, standardBreakdowns, summarize } from "@/lib/stats";
+import { advancedStats, detailBreakdowns, revengeTrades, streakContext, tradeNumberOfDay } from "@/lib/trade-analysis";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatDateTime, formatMoney, formatNumber, formatR, labelFor, plural, pnlClass } from "@/lib/trading";
 import { deleteBacktestSession } from "../actions";
@@ -40,6 +42,18 @@ export default async function BacktestSessionPage({ params }: PageProps<"/backte
   const curve = equityCurve(trades, start);
   const dd = maxDrawdown(curve);
   const b = standardBreakdowns(trades);
+  const x = advancedStats(trades);
+  // Die Session übernimmt die Rolle des Accounts für Tagesnummer und Revenge-Erkennung
+  const timed = trades.map((t) => ({ ...t, account_id: t.backtest_session_id }));
+  const revenge = revengeTrades(timed);
+  const db = detailBreakdowns(trades, {
+    tradeNumbers: tradeNumberOfDay(timed),
+    revenge,
+    streaks: streakContext(trades),
+  });
+  const symbolCount = new Set(trades.map((t) => t.symbol)).size;
+  const singleStop = symbolCount === 1 ? x.stopBySymbol[0] : undefined;
+  const pct = (v: number | null) => (v == null ? "–" : `${formatNumber(v * 100, 0)} %`);
 
   const period =
     session.period_from || session.period_to
@@ -120,6 +134,82 @@ export default async function BacktestSessionPage({ params }: PageProps<"/backte
             />
           </section>
 
+          <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6" aria-label="Risiko und Ausführung">
+            <StatTile
+              label="Ø SL-Größe"
+              value={singleStop ? `${formatNumber(singleStop.avg, 1)} ${singleStop.unit}` : "–"}
+              hint={singleStop ? singleStop.symbol : x.stopBySymbol.length ? "Mehrere Symbole – siehe Tabelle" : "Stop Loss eintragen"}
+            />
+            <StatTile
+              label="Ø geplantes CRV"
+              value={x.plan.avgPlannedRR == null ? "–" : `1 : ${formatNumber(x.plan.avgPlannedRR, 2)}`}
+              hint={x.plan.count ? `erreicht Ø ${formatR(x.plan.avgR)}` : "SL und TP eintragen"}
+            />
+            <StatTile
+              label="Ø max. mögliches R"
+              value={formatR(x.mfe.avgMfeR)}
+              hint={x.mfe.count ? `Ø Gegenlauf ${x.mfe.avgMaeR == null ? "–" : `${formatNumber(x.mfe.avgMaeR, 2)} R`}` : "Besten Kurs eintragen"}
+            />
+            <StatTile
+              label="Exit-Effizienz"
+              value={pct(x.mfe.avgEfficiency)}
+              hint={x.mfe.givenBackR == null ? "Erreichtes R ÷ mögliches R" : `${formatNumber(x.mfe.givenBackR, 1)} R liegen gelassen`}
+            />
+            <StatTile
+              label="Ausstiege"
+              value={`${x.exits.tp} / ${x.exits.manual} / ${x.exits.sl}`}
+              hint="TP / manuell / SL"
+            />
+            <StatTile
+              label="Fast ausgestoppt"
+              value={String(x.mfe.winnersNearStop)}
+              hint={`Gewinner mit Gegenlauf ≥ 0,8 R · ${x.mfe.losersWithOneR} Verlierer waren ≥ 1 R im Plus`}
+            />
+          </section>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>R-Verteilung</CardTitle>
+                <CardDescription>Wie die Ergebnisse der Session in R streuen</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RDistributionChart buckets={x.rBuckets} />
+              </CardContent>
+            </Card>
+            {x.stopBySymbol.length > 1 ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>SL-Größe je Symbol</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Symbol</TableHead>
+                        <TableHead className="text-right">Ø SL-Größe</TableHead>
+                        <TableHead className="text-right">Trades</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {x.stopBySymbol.map((row) => (
+                        <TableRow key={row.symbol}>
+                          <TableCell>{row.symbol}</TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatNumber(row.avg, 1)} {row.unit}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{row.count}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            ) : (
+              <BreakdownTable title="Nach Ausstieg" rows={db.exitReason} currency={currency} emptyText="Einstieg, Ausstieg und Stop Loss eintragen." />
+            )}
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>{start > 0 ? "Equity-Kurve" : "Kumulierte P&L"}</CardTitle>
@@ -137,6 +227,18 @@ export default async function BacktestSessionPage({ params }: PageProps<"/backte
             <BreakdownTable title="Nach Session" rows={b.session} currency={currency} />
             <BreakdownTable title="Nach Symbol" rows={b.symbol} currency={currency} />
             <BreakdownTable title="Nach Wochentag" rows={b.weekday} currency={currency} />
+            {x.stopBySymbol.length > 1 && (
+              <BreakdownTable title="Nach Ausstieg" rows={db.exitReason} currency={currency} emptyText="Einstieg, Ausstieg und Stop Loss eintragen." />
+            )}
+            <BreakdownTable title="Nach Haltedauer" rows={db.holdTime} currency={currency} />
+            <BreakdownTable title="Nach Trade-Nr. am Tag" rows={db.tradeOfDay} currency={currency} />
+            <BreakdownTable title="Nach Serie" rows={db.afterStreak} currency={currency} />
+            {revenge.size > 0 && <BreakdownTable title="Revenge-Trades" rows={db.revenge} currency={currency} />}
+            <BreakdownTable title="Nach Einstiegs-Timeframe" rows={db.timeframe} currency={currency} emptyText="Noch kein Timeframe erfasst." />
+            <BreakdownTable title="Nach übergeordnetem Trend" rows={db.htfBias} currency={currency} emptyText="Noch kein HTF-Trend erfasst." />
+            <BreakdownTable title="Nach Marktkontext" rows={db.marketContext} currency={currency} emptyText="Noch kein Marktkontext erfasst." />
+            <BreakdownTable title="SL auf Breakeven gezogen?" rows={db.breakeven} currency={currency} emptyText="Noch nicht erfasst." />
+            <BreakdownTable title="Teilgewinne genommen?" rows={db.partialClose} currency={currency} emptyText="Noch nicht erfasst." />
           </div>
         </>
       ) : (

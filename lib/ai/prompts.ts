@@ -84,7 +84,8 @@ export function buildNewsPrompt({ now, news, events, currencies, symbols }: News
 export const JOURNAL_SYSTEM = `Du bist ein erfahrener Trading-Coach und wertest das Journal eines privaten Traders (Prop-Firm-Accounts, Forex/CFDs/Futures) für einen Zeitraum aus. Antworte auf Deutsch.
 
 - Stütze jede Aussage auf die gelieferten Daten und nenne im Feld evidence bzw. observation konkrete Belege (Datum, Symbol, Anzahl, R oder Betrag).
-- Suche wiederkehrende Muster: Fehler-Tags, Emotionen, Uhrzeiten, Sessions, Strategien, Setup-Qualität, Regelverstöße, Notizen und Tages-Reviews.
+- Suche wiederkehrende Muster: Fehler-Tags, Emotionen, Uhrzeiten, Sessions, Strategien, Setup-Qualität, Timeframe, HTF-Trend, Marktkontext, Regelverstöße, Notizen und Tages-Reviews.
+- Ausführung: Vergleiche erreichtes R mit dem max. möglichen R (zu früh ausgestiegen?) und den Gegenlauf mit dem Stop (Stop zu eng?). Achte auf späte Trades des Tages und Trades kurz nach Verlusten (Overtrading, Revenge).
 - Beste Setups: was hat in diesem Zeitraum nachweislich funktioniert (Strategie, Qualität, Session), nicht nur einzelne Glückstreffer.
 - Vorschläge müssen konkret und umsetzbar sein (eine Regel, eine Gewohnheit), keine allgemeinen Floskeln.
 - focus: höchstens 3 Punkte für den nächsten Zeitraum.
@@ -112,6 +113,14 @@ export type JournalTradeInput = {
   notes: string | null;
   lessons: string | null;
   violations: string[];
+  /** Max. mögliches R und max. Gegenlauf in R (aus bestem/schlechtestem Kurs) */
+  mfe_r?: number | null;
+  mae_r?: number | null;
+  timeframe?: string | null;
+  htf_bias?: string | null;
+  market_context?: string | null;
+  trade_of_day?: number | null;
+  revenge?: boolean;
 };
 
 export type JournalPlanInput = {
@@ -144,7 +153,14 @@ export function buildJournalPrompt({ periodLabel, trades, plans, stats, review }
       t.status === "open" ? "offen" : `${t.net_pnl ?? "?"} ${t.currency}`,
       t.r_multiple == null ? null : `${t.r_multiple} R`,
       t.exit_time ? `Haltedauer ${Math.round((Date.parse(t.exit_time) - Date.parse(t.entry_time)) / 60000)} Min.` : null,
+      t.mfe_r == null ? null : `max. möglich ${t.mfe_r} R`,
+      t.mae_r == null ? null : `Gegenlauf ${t.mae_r} R`,
+      t.trade_of_day ? `${t.trade_of_day}. Trade des Tages` : null,
+      t.revenge ? "kurz nach einem Verlust eröffnet" : null,
       t.strategy ? `Strategie: ${t.strategy}` : "ohne Strategie",
+      t.timeframe ? `TF: ${t.timeframe}` : null,
+      t.htf_bias ? `HTF: ${t.htf_bias}` : null,
+      t.market_context ? `Markt: ${t.market_context}` : null,
       t.session ? `Session: ${t.session}` : null,
       t.setup_quality ? `Setup: ${t.setup_quality}` : null,
       t.emotion ? `Emotion: ${t.emotion}` : null,

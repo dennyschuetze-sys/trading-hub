@@ -11,12 +11,27 @@ import { ChipSelect } from "@/components/forms/chip-select";
 import { Field, FormSection, SelectField } from "@/components/forms/field";
 import { LocalDateTimeInput } from "@/components/forms/local-datetime-input";
 import { useFormAction } from "@/components/forms/use-form-action";
-import { EMOTIONS, MISTAKES, SESSIONS, SETUP_QUALITIES, type Account, type Trade } from "@/lib/trading";
+import {
+  EMOTIONS,
+  HTF_BIASES,
+  MARKET_CONTEXTS,
+  MISTAKES,
+  SESSIONS,
+  SETUP_QUALITIES,
+  TIMEFRAMES,
+  type Account,
+  type Trade,
+} from "@/lib/trading";
 import { cn } from "@/lib/utils";
 import { saveTrade } from "./actions";
 import { StrategyChecklist, type StrategyOption } from "./strategy-checklist";
 
 type AccountOption = Pick<Account, "id" | "name" | "market">;
+
+const YES_NO = [
+  { value: "true", label: "Ja" },
+  { value: "false", label: "Nein" },
+];
 type BacktestSessionOption = { id: string; name: string; market: string; strategy_id: string | null; symbols: string[] };
 
 export function TradeForm({
@@ -143,6 +158,54 @@ export function TradeForm({
             </Field>
             <Field label="Take Profit" htmlFor="take_profit">
               <Input id="take_profit" name="take_profit" inputMode="decimal" defaultValue={num(t?.take_profit)} />
+            </Field>
+            <Field
+              label="Bester Kurs im Trade"
+              htmlFor="best_price"
+              hint={`${direction === "long" ? "Hoch" : "Tief"} während der Trade lief – aus dem Chart, für das max. mögliche R`}
+            >
+              <Input id="best_price" name="best_price" inputMode="decimal" defaultValue={num(t?.best_price)} />
+            </Field>
+            <Field
+              label="Schlechtester Kurs im Trade"
+              htmlFor="worst_price"
+              hint={`${direction === "long" ? "Tief" : "Hoch"} während der Trade lief – zeigt, wie knapp der SL war`}
+            >
+              <Input id="worst_price" name="worst_price" inputMode="decimal" defaultValue={num(t?.worst_price)} />
+            </Field>
+            {status === "closed" && (
+              <>
+                <Field label="SL auf Breakeven gezogen?" htmlFor="moved_to_breakeven">
+                  <SelectField
+                    id="moved_to_breakeven"
+                    options={YES_NO}
+                    placeholder="–"
+                    defaultValue={t?.moved_to_breakeven == null ? "" : String(t.moved_to_breakeven)}
+                  />
+                </Field>
+                <Field label="Teilgewinne genommen?" htmlFor="partial_close">
+                  <SelectField
+                    id="partial_close"
+                    options={YES_NO}
+                    placeholder="–"
+                    defaultValue={t?.partial_close == null ? "" : String(t.partial_close)}
+                  />
+                </Field>
+              </>
+            )}
+          </FormSection>
+
+          <Separator />
+
+          <FormSection title="Setup & Kontext" description="Auf welchem Timeframe, in welchem Marktumfeld?">
+            <Field label="Einstiegs-Timeframe" htmlFor="entry_timeframe">
+              <SelectField id="entry_timeframe" options={TIMEFRAMES} placeholder="–" defaultValue={t?.entry_timeframe ?? ""} />
+            </Field>
+            <Field label="Übergeordneter Trend (HTF)" htmlFor="htf_bias">
+              <SelectField id="htf_bias" options={HTF_BIASES} placeholder="–" defaultValue={t?.htf_bias ?? ""} />
+            </Field>
+            <Field label="Marktkontext" htmlFor="market_context">
+              <SelectField id="market_context" options={MARKET_CONTEXTS} placeholder="–" defaultValue={t?.market_context ?? ""} />
             </Field>
           </FormSection>
 

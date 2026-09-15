@@ -10,11 +10,21 @@ import { longDate } from "@/components/charts/format";
 import { PnlCalendar } from "@/components/charts/pnl-calendar";
 import { StatTile } from "@/components/charts/stat-tile";
 import { PageHeader } from "@/components/layout/page-header";
-import { fetchStatTrades } from "@/lib/queries";
+import { fetchDetailTrades } from "@/lib/queries";
 import { loadViolations } from "@/lib/risk-queries";
 import { hasAnyRule, ruleBreakdowns } from "@/lib/risk-rules";
 import { RANGES, rangeStart, resolveScope, scopeOptions } from "@/lib/scope";
+import { RDistributionChart } from "@/components/charts/r-distribution-chart";
 import { closeTime, closedTrades, dailyResults, equityCurve, maxDrawdown, standardBreakdowns, summarize } from "@/lib/stats";
+import {
+  REVENGE_MINUTES,
+  advancedStats,
+  detailBreakdowns,
+  revengeTrades,
+  riskPercents,
+  streakContext,
+  tradeNumberOfDay,
+} from "@/lib/trade-analysis";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney, formatNumber, formatR, plural } from "@/lib/trading";
 import { FilterBar } from "./filter-bar";
@@ -39,7 +49,7 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
     supabase.from("accounts").select("id, name, currency, starting_balance, status").order("name"),
     supabase.from("strategies").select("id, name"),
   ]);
-  const allTrades = await fetchStatTrades(supabase);
+  const allTrades = await fetchDetailTrades(supabase);
   const scope = resolveScope(accounts ?? [], param(sp.scope), allTrades);
 
   if (!scope) {
@@ -60,9 +70,8 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
   }
 
   const start = rangeStart(range);
-  const scoped = allTrades.filter(
-    (t) => scope.accountIds.includes(t.account_id) && (!direction || t.direction === direction),
-  );
+  const inScope = allTrades.filter((t) => scope.accountIds.includes(t.account_id));
+  const scoped = inScope.filter((t) => !direction || t.direction === direction);
   const before = start ? closedTrades(scoped).filter((t) => closeTime(t) < start) : [];
   const trades = start ? scoped.filter((t) => closeTime(t) >= start) : scoped;
 
@@ -73,6 +82,20 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
   const dd = maxDrawdown(curve);
   const days = dailyResults(trades);
   const b = standardBreakdowns(trades, new Map((strategies ?? []).map((st) => [st.id, st.name])));
+  // Tagesnummer, Revenge, Serien und Kontostand hängen von allen Trades der Accounts ab, nicht nur vom Filter
+  const riskPct = riskPercents(inScope, new Map((accounts ?? []).map((a) => [a.id, a.starting_balance])));
+  const x = advancedStats(trades, riskPct);
+  const revenge = revengeTrades(inScope);
+  const db = detailBreakdowns(trades, {
+    tradeNumbers: tradeNumberOfDay(inScope),
+    revenge,
+    streaks: streakContext(inScope),
+  });
+  const revengeCount = closedTrades(trades).filter((t) => revenge.has(t.id)).length;
+  const symbols = new Set(trades.map((t) => t.symbol));
+  const singleStop = symbols.size === 1 ? x.stopBySymbol[0] : undefined;
+  const exitTotal = x.exits.sl + x.exits.tp + x.exits.manual;
+  const pctOf = (n: number, total: number) => (total ? `${Math.round((n / total) * 100)} %` : "–");
   // Verstöße über alle Trades berechnen (Tageszählung braucht auch Trades außerhalb des Filters)
   const { violations, rules } = await loadViolations(supabase, {}, { trades: allTrades });
   const ruleRows = ruleBreakdowns(trades, violations);
@@ -125,6 +148,117 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
               hint={dd.amount ? `${pct(dd.percent)} vom Höchststand` : "Kein Rückgang"}
             />
           </section>
+
+          <section className="grid gap-3" aria-labelledby="execution-heading">
+            <h2 id="execution-heading" className="font-medium">
+              Risiko & Ausführung
+            </h2>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+              <StatTile
+                label="Ø SL-Größe"
+                value={singleStop ? `${formatNumber(singleStop.avg, 1)} ${singleStop.unit}` : "–"}
+                hint={
+                  singleStop
+                    ? `${singleStop.symbol} · aus ${plural(singleStop.count, "Trade", "Trades")}`
+                    : x.stopBySymbol.length
+                      ? "Mehrere Symbole – siehe Tabelle unten"
+                      : "Stop Loss bei Trades eintragen"
+                }
+              />
+              <StatTile
+                label="Ø geplantes CRV"
+                value={x.plan.avgPlannedRR == null ? "–" : `1 : ${formatNumber(x.plan.avgPlannedRR, 2)}`}
+                hint={x.plan.count ? `erreicht Ø ${formatR(x.plan.avgR)}` : "SL und TP bei Trades eintragen"}
+              />
+              <StatTile
+                label="Ø max. mögliches R"
+                value={formatR(x.mfe.avgMfeR)}
+                hint={x.mfe.count ? `aus ${plural(x.mfe.count, "Trade", "Trades")} · Ø Gegenlauf ${x.mfe.avgMaeR == null ? "–" : `${formatNumber(x.mfe.avgMaeR, 2)} R`}` : "Besten Kurs im Trade eintragen"}
+              />
+              <StatTile
+                label="Exit-Effizienz"
+                value={pct(x.mfe.avgEfficiency)}
+                hint={x.mfe.givenBackR == null ? "Erreichtes R ÷ mögliches R" : `${formatNumber(x.mfe.givenBackR, 1)} R liegen gelassen`}
+              />
+              <StatTile
+                label="Ø Risiko pro Trade"
+                value={x.risk.avgPct == null ? "–" : `${formatNumber(x.risk.avgPct * 100, 2)} %`}
+                hint={
+                  x.risk.count
+                    ? `${formatNumber(x.risk.minPct! * 100, 2)}–${formatNumber(x.risk.maxPct! * 100, 2)} % · ${plural(x.risk.oversized, "Übergröße", "Übergrößen")}`
+                    : "Risiko bei Trades eintragen"
+                }
+              />
+              <StatTile
+                label="Ø Kosten"
+                value={x.costs.avgR == null ? "–" : `${formatNumber(x.costs.avgR, 2)} R`}
+                hint={x.costs.shareOfGross == null ? "Kommission + Swap" : `${pct(x.costs.shareOfGross)} vom Bruttogewinn`}
+              />
+            </div>
+          </section>
+
+          <div className="grid gap-6 xl:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>R-Verteilung</CardTitle>
+                <CardDescription>
+                  Wie deine Ergebnisse in R streuen · Erwartungswert {formatR(s.avgR)} pro Trade
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RDistributionChart buckets={x.rBuckets} />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Ausführung</CardTitle>
+                <CardDescription>Wo du R liegen lässt – und wie knapp dein Stop war</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  {(
+                    [
+                      ["Ausstieg am Take Profit", `${x.exits.tp} (${pctOf(x.exits.tp, exitTotal)})`],
+                      ["Manuell geschlossen", `${x.exits.manual} (${pctOf(x.exits.manual, exitTotal)})`],
+                      ["Ausstieg am Stop Loss", `${x.exits.sl} (${pctOf(x.exits.sl, exitTotal)})`],
+                      ["Gewinner fast ausgestoppt (Gegenlauf ≥ 0,8 R)", String(x.mfe.winnersNearStop)],
+                      ["Verlierer, die ≥ 1 R im Plus waren", String(x.mfe.losersWithOneR)],
+                      [`Revenge-Trades (≤ ${REVENGE_MINUTES} Min. nach Verlust)`, String(revengeCount)],
+                    ] as const
+                  ).map(([label, value]) => (
+                    <div key={label} className="contents">
+                      <dt className="text-muted-foreground">{label}</dt>
+                      <dd className="text-right tabular-nums">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {x.stopBySymbol.length > 0 && (
+                  <div className="max-h-56 overflow-auto rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Symbol</TableHead>
+                          <TableHead className="text-right">Ø SL-Größe</TableHead>
+                          <TableHead className="text-right">Trades</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {x.stopBySymbol.map((row) => (
+                          <TableRow key={row.symbol}>
+                            <TableCell>{row.symbol}</TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatNumber(row.avg, 1)} {row.unit}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">{row.count}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="grid gap-6 xl:grid-cols-2">
             <Card>
@@ -241,6 +375,46 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
               emptyText="Markiere bei deinen Trades, ob du den Plan eingehalten hast."
             />
             <BreakdownTable title="Fehler" rows={b.mistakes} currency={scope.currency} />
+            <BreakdownTable title="Nach Haltedauer" rows={db.holdTime} currency={scope.currency} />
+            <BreakdownTable
+              title="Nach Ausstieg"
+              rows={db.exitReason}
+              currency={scope.currency}
+              emptyText="Trage bei deinen Trades Einstieg, Ausstieg und Stop Loss ein."
+            />
+            <BreakdownTable title="Nach Trade-Nr. am Tag" rows={db.tradeOfDay} currency={scope.currency} />
+            <BreakdownTable title="Revenge-Trades" rows={db.revenge} currency={scope.currency} />
+            <BreakdownTable title="Nach Serie" rows={db.afterStreak} currency={scope.currency} />
+            <BreakdownTable
+              title="Nach Einstiegs-Timeframe"
+              rows={db.timeframe}
+              currency={scope.currency}
+              emptyText="Trage bei deinen Trades den Einstiegs-Timeframe ein."
+            />
+            <BreakdownTable
+              title="Nach übergeordnetem Trend"
+              rows={db.htfBias}
+              currency={scope.currency}
+              emptyText="Trage bei deinen Trades ein, ob du mit oder gegen den Trend gehandelt hast."
+            />
+            <BreakdownTable
+              title="Nach Marktkontext"
+              rows={db.marketContext}
+              currency={scope.currency}
+              emptyText="Trage bei deinen Trades den Marktkontext ein."
+            />
+            <BreakdownTable
+              title="SL auf Breakeven gezogen?"
+              rows={db.breakeven}
+              currency={scope.currency}
+              emptyText="Markiere bei deinen Trades, ob du den SL auf Breakeven gezogen hast."
+            />
+            <BreakdownTable
+              title="Teilgewinne genommen?"
+              rows={db.partialClose}
+              currency={scope.currency}
+              emptyText="Markiere bei deinen Trades, ob du Teilgewinne genommen hast."
+            />
             {hasAnyRule(rules) && (
               <>
                 <BreakdownTable title="Persönliche Regeln" rows={ruleRows.compliance} currency={scope.currency} />

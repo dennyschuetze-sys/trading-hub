@@ -5,12 +5,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteButton } from "@/components/forms/delete-button";
-import { plannedRewardRisk } from "@/lib/r-multiple";
+import {
+  costsInR,
+  exitEfficiency,
+  exitReason,
+  formatStopSize,
+  maxAdverseR,
+  maxFavorableR,
+  plannedRewardRisk,
+  stopSize,
+} from "@/lib/r-multiple";
+import { REVENGE_MINUTES, revengeTrades, tradeNumberOfDay } from "@/lib/trade-analysis";
 import { loadViolations } from "@/lib/risk-queries";
 import { VIOLATION_LABELS, type Violation } from "@/lib/risk-rules";
 import { berlinParts } from "@/lib/stats";
 import { createClient } from "@/lib/supabase/server";
 import {
+  HTF_BIASES,
+  MARKET_CONTEXTS,
   SESSIONS,
   dayBoundary,
   formatDateTime,
@@ -53,6 +65,19 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
       });
   const tradeViolations = violations.get(trade.id) ?? [];
 
+  // Trade-Nr. am Tag und Revenge-Erkennung aus den Trades desselben Accounts rund um den Einstieg
+  const { data: nearby } = trade.account_id
+    ? await supabase
+        .from("trades")
+        .select("id, account_id, entry_time, exit_time, status, net_pnl")
+        .eq("account_id", trade.account_id)
+        .gte("entry_time", new Date(Date.parse(trade.entry_time) - 24 * 3600000).toISOString())
+        .lte("entry_time", dayBoundary(day, "end"))
+    : { data: null };
+  const neighbours = (nearby ?? []).map((t) => ({ ...t, account_id: t.account_id! }));
+  const tradeNo = neighbours.length ? tradeNumberOfDay(neighbours).get(trade.id) : undefined;
+  const isRevenge = revengeTrades(neighbours).has(trade.id);
+
   const checklist = (checklistResults ?? [])
     .flatMap((r) => (r.strategy_checklist_items ? [{ ...r.strategy_checklist_items, checked: r.checked }] : []))
     .sort((a, b) => a.position - b.position);
@@ -72,6 +97,14 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
   const isFutures = container?.market === "futures";
   const money = (v: number | null, signed = false) => formatMoney(v, currency, signed);
   const plannedRR = plannedRewardRisk(trade);
+  const stop = stopSize(trade);
+  const mfe = maxFavorableR(trade);
+  const mae = maxAdverseR(trade);
+  const efficiency = exitEfficiency(trade);
+  const exit = trade.status === "closed" ? exitReason(trade) : null;
+  const costs = costsInR(trade);
+  const yesNo = (v: boolean | null) => (v == null ? "–" : v ? "Ja" : "Nein");
+  const rValue = (v: number | null) => (v == null ? "–" : `${formatNumber(v, 2)} R`);
 
   const details: [string, React.ReactNode][] = [
     session ? ["Backtest", session.name] : ["Account", trade.accounts?.name],
@@ -82,12 +115,26 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
     ["Ausstiegskurs", formatNumber(trade.exit_price)],
     ["Stop Loss", formatNumber(trade.stop_loss)],
     ["Take Profit", formatNumber(trade.take_profit)],
+    ["SL-Größe", formatStopSize(stop) ?? "–"],
     ["Geplantes CRV", plannedRR == null ? "–" : `1 : ${formatNumber(plannedRR)}`],
+    ["Bester Kurs", formatNumber(trade.best_price)],
+    ["Schlechtester Kurs", formatNumber(trade.worst_price)],
+    ["Max. mögliches R", rValue(mfe)],
+    ["Max. Gegenlauf", rValue(mae)],
+    ["Exit-Effizienz", efficiency == null ? "–" : `${formatNumber(efficiency * 100, 0)} %`],
+    ["Ausstiegsart", exit ? { sl: "Am Stop Loss", tp: "Am Take Profit", manual: "Manuell" }[exit] : "–"],
+    ["SL auf Breakeven", yesNo(trade.moved_to_breakeven)],
+    ["Teilgewinne", yesNo(trade.partial_close)],
     ["P&L brutto", money(trade.pnl, true)],
     ["Kommission", money(trade.commission)],
     ["Swap", money(trade.swap)],
+    ["Kosten in R", rValue(costs)],
     ["Risiko", money(trade.risk_amount)],
     ["Session", labelFor(SESSIONS, trade.session)],
+    ...(tradeNo ? ([["Trade am Tag", `${tradeNo}. Trade`]] as [string, React.ReactNode][]) : []),
+    ["Timeframe", trade.entry_timeframe ?? "–"],
+    ["HTF-Trend", labelFor(HTF_BIASES, trade.htf_bias)],
+    ["Marktkontext", labelFor(MARKET_CONTEXTS, trade.market_context)],
     ["Setup-Qualität", trade.setup_quality ?? "–"],
     ["Emotion", trade.emotion ?? "–"],
     ["Plan eingehalten", trade.followed_plan == null ? "–" : trade.followed_plan ? "Ja" : "Nein"],
@@ -110,6 +157,11 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
               {trade.direction === "long" ? "Long" : "Short"}
             </Badge>
             {trade.status === "open" && <Badge variant="outline">Offen</Badge>}
+            {isRevenge && (
+              <Badge variant="outline" className="border-loss/50" title={`Eröffnet ≤ ${REVENGE_MINUTES} Min. nach einem Verlust`}>
+                Revenge-Trade?
+              </Badge>
+            )}
             {session && (
               <Badge variant="secondary">
                 <FlaskConical aria-hidden /> Backtest

@@ -23,6 +23,28 @@ export type CoreTrade = Pick<
 /** Live-Trade: gehört immer zu einem Account. */
 export type StatTrade = CoreTrade & { account_id: string };
 
+/** Kurse, Kosten und Setup-Kontext – für die erweiterten Auswertungen. */
+export type TradeDetails = Pick<
+  Trade,
+  | "entry_price"
+  | "exit_price"
+  | "stop_loss"
+  | "take_profit"
+  | "best_price"
+  | "worst_price"
+  | "pnl"
+  | "commission"
+  | "swap"
+  | "entry_timeframe"
+  | "htf_bias"
+  | "market_context"
+  | "moved_to_breakeven"
+  | "partial_close"
+>;
+
+/** Live-Trade mit Details. */
+export type DetailTrade = StatTrade & TradeDetails;
+
 // Zeit in Berliner Zeit -----------------------------------------------------------
 
 const partsFormatter = new Intl.DateTimeFormat("en-CA", {

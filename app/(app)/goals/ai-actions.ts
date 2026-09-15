@@ -12,7 +12,9 @@ import { loadDisciplineData } from "@/lib/goals-queries";
 import { isPeriodType, periodEnd, periodLabel, periodStart, type PeriodType } from "@/lib/periods";
 import { VIOLATION_LABELS } from "@/lib/risk-rules";
 import { createClient } from "@/lib/supabase/server";
-import { SESSIONS, dayBoundary, labelFor } from "@/lib/trading";
+import { maxAdverseR, maxFavorableR } from "@/lib/r-multiple";
+import { revengeTrades, tradeNumberOfDay } from "@/lib/trade-analysis";
+import { HTF_BIASES, MARKET_CONTEXTS, SESSIONS, dayBoundary, labelFor } from "@/lib/trading";
 
 /** KI-Analyse des Journals für eine Woche oder einen Monat. */
 export async function generateJournalAnalysis(type: PeriodType, requestedStart: string): Promise<{ error?: string }> {
@@ -34,7 +36,7 @@ export async function generateJournalAnalysis(type: PeriodType, requestedStart: 
     loadDisciplineData(supabase),
     supabase
       .from("trades")
-      .select("id, entry_time, exit_time, symbol, direction, status, net_pnl, r_multiple, session, setup_quality, emotion, mistakes, followed_plan, notes, lessons, accounts(name, currency), strategies(name)")
+      .select("id, account_id, entry_time, exit_time, symbol, direction, status, net_pnl, r_multiple, session, setup_quality, emotion, mistakes, followed_plan, notes, lessons, entry_price, stop_loss, best_price, worst_price, entry_timeframe, htf_bias, market_context, accounts(name, currency), strategies(name)")
       .eq("is_backtest", false)
       .gte("entry_time", dayBoundary(start, "start"))
       .lte("entry_time", dayBoundary(end, "end"))
@@ -62,6 +64,10 @@ export async function generateJournalAnalysis(type: PeriodType, requestedStart: 
     new Map((strategies ?? []).map((s) => [s.id, s.name])),
   );
 
+  const timed = (trades ?? []).map((t) => ({ ...t, account_id: t.account_id ?? "" }));
+  const tradeNumbers = tradeNumberOfDay(timed);
+  const revenge = revengeTrades(timed);
+
   try {
     const result = await generateStructured({
       schema: JournalAnalysisSchema,
@@ -75,6 +81,13 @@ export async function generateJournalAnalysis(type: PeriodType, requestedStart: 
           strategy: t.strategies?.name ?? null,
           session: t.session ? labelFor(SESSIONS, t.session) : null,
           violations: (discipline.violations.get(t.id) ?? []).map((v) => `${VIOLATION_LABELS[v.kind]} – ${v.message}`),
+          mfe_r: maxFavorableR(t),
+          mae_r: maxAdverseR(t),
+          timeframe: t.entry_timeframe,
+          htf_bias: t.htf_bias ? labelFor(HTF_BIASES, t.htf_bias) : null,
+          market_context: t.market_context ? labelFor(MARKET_CONTEXTS, t.market_context) : null,
+          trade_of_day: tradeNumbers.get(t.id) ?? null,
+          revenge: revenge.has(t.id),
         })),
         plans: plans ?? [],
         stats,

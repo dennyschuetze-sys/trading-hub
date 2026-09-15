@@ -15,7 +15,7 @@ import {
   type FormState,
 } from "@/lib/form-data";
 import { estimateRisk } from "@/lib/r-multiple";
-import { guessSession } from "@/lib/trading";
+import { HTF_BIASES, MARKET_CONTEXTS, TIMEFRAMES, guessSession } from "@/lib/trading";
 import type { TablesInsert } from "@/lib/database.types";
 
 function parseTrade(formData: FormData): TablesInsert<"trades"> {
@@ -40,6 +40,22 @@ function parseTrade(formData: FormData): TablesInsert<"trades"> {
   // Ohne Eingabe aus SL und Ergebnis berechnen, damit das R-Multiple nicht fehlt
   const riskAmount = enteredRisk ?? estimateRisk({ direction, ...prices });
 
+  // Bester/schlechtester Kurs während des Trades – müssen zur Richtung passen
+  const bestPrice = num(formData, "best_price");
+  const worstPrice = num(formData, "worst_price");
+  const entry = prices.entry_price;
+  if (entry != null) {
+    const favorable = (p: number) => (direction === "long" ? p - entry : entry - p);
+    if (bestPrice != null && favorable(bestPrice) < 0)
+      throw new FormError(`Der beste Kurs muss bei ${direction === "long" ? "Long über" : "Short unter"} dem Einstieg liegen.`);
+    if (worstPrice != null && favorable(worstPrice) > 0)
+      throw new FormError(`Der schlechteste Kurs muss bei ${direction === "long" ? "Long unter" : "Short über"} dem Einstieg liegen.`);
+  }
+  const oneOf = (key: string, values: string[]) => {
+    const value = text(formData, key);
+    return value != null && values.includes(value) ? value : null;
+  };
+
   const tags = (text(formData, "tags") ?? "")
     .split(",")
     .map((t) => t.trim())
@@ -60,6 +76,13 @@ function parseTrade(formData: FormData): TablesInsert<"trades"> {
     ...prices,
     quantity,
     take_profit: num(formData, "take_profit"),
+    best_price: bestPrice,
+    worst_price: worstPrice,
+    moved_to_breakeven: bool(formData, "moved_to_breakeven"),
+    partial_close: bool(formData, "partial_close"),
+    entry_timeframe: oneOf("entry_timeframe", TIMEFRAMES),
+    htf_bias: oneOf("htf_bias", HTF_BIASES.map((o) => o.value)),
+    market_context: oneOf("market_context", MARKET_CONTEXTS.map((o) => o.value)),
     commission: money(formData, "commission") ?? 0,
     swap: money(formData, "swap") ?? 0,
     risk_amount: riskAmount,
