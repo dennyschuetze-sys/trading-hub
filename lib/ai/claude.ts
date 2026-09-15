@@ -47,7 +47,9 @@ export async function generateStructured<S extends z.ZodType>(options: {
     if (e instanceof Anthropic.RateLimitError) throw new AiError("Zu viele Anfragen oder Guthaben aufgebraucht. Bitte später erneut versuchen.");
     if (e instanceof Anthropic.BadRequestError) {
       console.error("Claude-Anfrage abgelehnt", e.message);
-      throw new AiError(/credit|billing/i.test(e.message) ? "Das API-Guthaben ist aufgebraucht." : "Die Anfrage wurde abgelehnt.");
+      if (/credit|billing/i.test(e.message)) throw new AiError("Das API-Guthaben ist aufgebraucht.");
+      // Die API-Meldung enthält keine Geheimnisse und hilft bei der Fehlersuche
+      throw new AiError(`Die Anfrage wurde abgelehnt: ${e.message.slice(0, 300)}`);
     }
     if (e instanceof Anthropic.APIConnectionTimeoutError) throw new AiError("Die KI hat zu lange gebraucht. Bitte erneut versuchen.");
     if (e instanceof Anthropic.APIError) {
