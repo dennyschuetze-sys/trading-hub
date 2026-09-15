@@ -119,7 +119,7 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
   ];
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-12 pb-8">
+    <div className="grid gap-12 pb-8">
       <div className="grid gap-7">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div className="grid gap-2">
