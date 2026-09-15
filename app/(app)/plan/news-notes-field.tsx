@@ -4,9 +4,9 @@ import { useState } from "react";
 import { ClipboardPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Field } from "@/components/forms/field";
 import { ImpactLabel } from "@/components/news/event-list";
 import type { CalendarEvent } from "@/lib/calendar";
+import { PlanLabel } from "./plan-section";
 
 type DayEvent = Pick<CalendarEvent, "id" | "title" | "currency" | "impact"> & { timeLabel: string };
 
@@ -24,13 +24,21 @@ export function NewsNotesField({ defaultValue, events }: { defaultValue: string;
 
   return (
     <div className="grid gap-2">
-      <Field label="Wichtige News heute" htmlFor="news_notes" hint="z. B. „14:30 US-CPI – 15 Min. vorher flat“">
-        <Textarea id="news_notes" name="news_notes" rows={3} value={value} onChange={(e) => setValue(e.target.value)} maxLength={5000} />
-      </Field>
+      <PlanLabel htmlFor="news_notes">Wichtige News heute</PlanLabel>
+      <Textarea
+        id="news_notes"
+        name="news_notes"
+        rows={3}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        maxLength={5000}
+        placeholder="z. B. „14:30 US-CPI – 15 Min. vorher flat“"
+        className="min-h-20"
+      />
       {events.length > 0 && (
-        <div className="grid gap-1.5 rounded-md border p-2">
+        <div className="grid gap-1.5 rounded-lg border border-border bg-background/30 p-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground">Kalender für diesen Tag</p>
+            <p className="text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">Kalender für diesen Tag</p>
             <Button type="button" variant="ghost" size="sm" onClick={adopt}>
               <ClipboardPlus className="size-4" /> Übernehmen
             </Button>
