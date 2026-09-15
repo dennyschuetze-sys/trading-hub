@@ -51,3 +51,6 @@ export const navGroups: NavGroup[] = [
 ];
 
 export const navItems = navGroups.flatMap((g) => g.items);
+
+/** Cookie für die ein-/ausgeblendete Seitenleiste – hier statt in der Client-Komponente, damit der Server den Namen lesen kann. */
+export const SIDEBAR_COOKIE = "sidebar";
