@@ -21,6 +21,8 @@ export function RDistributionChart({ buckets, height = 220 }: { buckets: RBucket
           <CartesianGrid vertical={false} stroke="var(--chart-grid)" strokeWidth={1} />
           <XAxis
             dataKey="label"
+            // „−2 bis −1 R“ → „−2…−1“; der volle Bereich steht im Tooltip
+            tickFormatter={(label: string) => label.replace(" bis ", "…").replace(" R", "")}
             tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}

@@ -32,8 +32,8 @@ export function FilterBar({
   };
 
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-2">
-      <div className="flex flex-wrap gap-1 rounded-lg border p-1" role="group" aria-label="Zeitraum">
+    <div className="mb-8 flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap gap-0.5 rounded-lg border bg-card p-0.5" role="group" aria-label="Zeitraum">
         {RANGES.map((r) => (
           <button
             key={r.value}
@@ -42,7 +42,9 @@ export function FilterBar({
             onClick={() => update("range", r.value === "all" ? "" : r.value)}
             className={cn(
               "rounded-md px-2.5 py-1 text-sm transition-colors",
-              range === r.value ? "bg-secondary font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60",
+              range === r.value
+                ? "bg-secondary font-medium text-foreground shadow-[inset_0_0_0_1px_var(--border)]"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {r.label}
