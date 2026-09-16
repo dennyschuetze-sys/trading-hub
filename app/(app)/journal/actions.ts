@@ -61,6 +61,8 @@ function parseTrade(formData: FormData): TablesInsert<"trades"> {
     .map((t) => t.trim())
     .filter(Boolean);
 
+  const strategyId = text(formData, "strategy_id");
+
   // Backtest-Trades gehören zu einer Session statt zu einem Account
   const backtestSessionId = text(formData, "backtest_session_id");
 
@@ -95,7 +97,8 @@ function parseTrade(formData: FormData): TablesInsert<"trades"> {
     rating: rating == null ? null : Math.round(rating),
     notes: text(formData, "notes"),
     lessons: text(formData, "lessons"),
-    strategy_id: text(formData, "strategy_id"),
+    strategy_id: strategyId,
+    entry_criterion: strategyId ? (text(formData, "entry_criterion")?.slice(0, 100) ?? null) : null,
   };
 }
 

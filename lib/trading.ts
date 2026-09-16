@@ -63,7 +63,7 @@ export const SESSIONS: Option[] = [
 
 export const SETUP_QUALITIES = ["A+", "A", "B", "C"];
 
-export const TIMEFRAMES = ["M1", "M5", "M15", "M30", "H1", "H4", "D1"];
+export const TIMEFRAMES = ["M1", "M2", "M3", "M4", "M5", "M15", "M30", "H1", "H4", "D1"];
 
 export const HTF_BIASES: Option[] = [
   { value: "with", label: "Mit dem Trend" },

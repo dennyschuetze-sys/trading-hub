@@ -5,16 +5,21 @@ import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { DesktopSidebar, SidebarProvider, SidebarToggle } from "@/components/layout/sidebar-state";
 import { SIDEBAR_COOKIE } from "@/lib/navigation";
+import { UI_SCALE_COOKIE, parseUiScale } from "@/lib/ui-scale";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await getUser();
   if (!user) redirect("/login");
-  const collapsed = (await cookies()).get(SIDEBAR_COOKIE)?.value === "collapsed";
+  const cookieStore = await cookies();
+  const collapsed = cookieStore.get(SIDEBAR_COOKIE)?.value === "collapsed";
+  const scale = parseUiScale(cookieStore.get(UI_SCALE_COOKIE)?.value);
 
   return (
     <SidebarProvider initialCollapsed={collapsed}>
+      {/* Anzeigegröße aus den Einstellungen: skaliert alle rem-Maße */}
+      {scale !== 100 && <style>{`html{font-size:${scale}%}`}</style>}
       <div className="flex min-h-screen">
         <a
           href="#main"

@@ -38,7 +38,7 @@ export function NewsNotesField({ defaultValue, events }: { defaultValue: string;
       {events.length > 0 && (
         <div className="grid gap-1.5 rounded-lg border border-border bg-background/30 p-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">Kalender für diesen Tag</p>
+            <p className="text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">Kalender für diesen Tag</p>
             <Button type="button" variant="ghost" size="sm" onClick={adopt}>
               <ClipboardPlus className="size-4" /> Übernehmen
             </Button>

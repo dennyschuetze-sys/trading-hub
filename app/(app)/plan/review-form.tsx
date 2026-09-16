@@ -32,7 +32,7 @@ export function ReviewForm({ date, plan }: { date: string; plan: DailyPlan | nul
           <PlanLabel>Reflexion</PlanLabel>
           <div className="grid gap-6 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)]">
             <div className="grid content-start gap-2">
-              <span id="followed_plan-label" className="text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+              <span id="followed_plan-label" className="text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
                 Plan eingehalten?
               </span>
               <input type="hidden" name="followed_plan" value={followedPlan} />

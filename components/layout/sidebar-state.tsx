@@ -73,7 +73,7 @@ export function SidebarToggle() {
         </Button>
       </TooltipTrigger>
       <TooltipContent side="bottom">
-        {label} <kbd className="ml-1 rounded border px-1 text-[10px]">Strg B</kbd>
+        {label} <kbd className="ml-1 rounded border px-1 text-[0.625rem]">Strg B</kbd>
       </TooltipContent>
     </Tooltip>
   );

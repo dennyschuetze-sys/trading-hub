@@ -23,7 +23,7 @@ export function RDistributionChart({ buckets, height = 220 }: { buckets: RBucket
             dataKey="label"
             // „−2 bis −1 R“ → „−2…−1“; der volle Bereich steht im Tooltip
             tickFormatter={(label: string) => label.replace(" bis ", "…").replace(" R", "")}
-            tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
+            tick={{ fill: "var(--chart-axis)", fontSize: "0.6875rem" }}
             tickLine={false}
             axisLine={false}
             // Bei vielen Balken Beschriftungen ausdünnen statt überlappen lassen
@@ -32,7 +32,7 @@ export function RDistributionChart({ buckets, height = 220 }: { buckets: RBucket
           />
           <YAxis
             allowDecimals={false}
-            tick={{ fill: "var(--chart-axis)", fontSize: 12 }}
+            tick={{ fill: "var(--chart-axis)", fontSize: "0.75rem" }}
             tickLine={false}
             axisLine={false}
             width={32}

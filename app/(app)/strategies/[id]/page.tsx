@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckSquare, FileText, FlaskConical, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, CheckSquare, Crosshair, FileText, FlaskConical, Pencil, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { StatTile } from "@/components/charts/stat-tile";
 import { Markdown } from "@/components/markdown";
 import { extractStoragePaths, signStoragePaths } from "@/lib/note-images";
 import { fetchStatTrades } from "@/lib/queries";
-import { checklistBreakdowns, closeTime, closedTrades, equityCurve, maxDrawdown, standardBreakdowns, summarize } from "@/lib/stats";
+import { breakdown, checklistBreakdowns, closeTime, closedTrades, equityCurve, maxDrawdown, standardBreakdowns, summarize } from "@/lib/stats";
 import { STRATEGY_STATUSES, excerpt } from "@/lib/strategies";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatDateTime, formatMoney, formatNumber, formatR, labelFor, plural, pnlClass } from "@/lib/trading";
@@ -24,12 +24,13 @@ export default async function StrategyPage({ params, searchParams }: PageProps<"
   const { data: strategy } = await supabase.from("strategies").select("*").eq("id", id).maybeSingle();
   if (!strategy) notFound();
 
-  const [{ data: checklist }, { data: notes }, { data: accounts }, allTrades, { data: backtests }] = await Promise.all([
+  const [{ data: checklist }, { data: notes }, { data: accounts }, allTrades, { data: backtests }, { data: criteria }] = await Promise.all([
     supabase.from("strategy_checklist_items").select("id, label").eq("strategy_id", id).order("position"),
     supabase.from("playbook_notes").select("id, title, content, updated_at").eq("strategy_id", id).order("updated_at", { ascending: false }),
     supabase.from("accounts").select("id, name, currency"),
     fetchStatTrades(supabase),
     supabase.from("backtest_sessions").select("id, name, status, trades(count)").eq("strategy_id", id).order("updated_at", { ascending: false }),
+    supabase.from("trades").select("id, entry_criterion").eq("strategy_id", id).eq("is_backtest", false).not("entry_criterion", "is", null),
   ]);
 
   const currencyOf = new Map((accounts ?? []).map((a) => [a.id, a.currency]));
@@ -58,6 +59,8 @@ export default async function StrategyPage({ params, searchParams }: PageProps<"
   const dd = maxDrawdown(curve.map((p) => ({ balance: p.balance })));
   const b = standardBreakdowns(trades);
   const cb = checklistBreakdowns(trades, checklist ?? [], results ?? []);
+  const criterionOf = new Map((criteria ?? []).map((t) => [t.id, t.entry_criterion]));
+  const byCriterion = breakdown(trades, (t) => criterionOf.get(t.id) ?? null);
   const money = (v: number | null, signed = false) => formatMoney(v, currency, signed);
   const recent = closedTrades(trades).reverse().slice(0, 8);
 
@@ -159,6 +162,12 @@ export default async function StrategyPage({ params, searchParams }: PageProps<"
             {cb.missed.length > 0 && (
               <BreakdownTable title="Wenn dieser Punkt NICHT erfüllt war" rows={cb.missed} currency={currency} />
             )}
+            <BreakdownTable
+              title="Nach Einstiegskriterium"
+              rows={byCriterion}
+              currency={currency}
+              emptyText="Wähle beim Erfassen das Einstiegskriterium, dann siehst du hier, welcher Einstieg am besten läuft."
+            />
             <BreakdownTable title="Nach Symbol" rows={b.symbol} currency={currency} />
             <BreakdownTable title="Nach Session" rows={b.session} currency={currency} />
             <BreakdownTable title="Nach Setup-Qualität" rows={b.setupQuality} currency={currency} emptyText="Noch keine Setup-Qualität erfasst." />
@@ -205,6 +214,27 @@ export default async function StrategyPage({ params, searchParams }: PageProps<"
         </div>
 
         <div className="grid content-start gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Crosshair className="size-4" /> Einstiegskriterien
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {strategy.entry_criteria.length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {strategy.entry_criteria.map((c) => (
+                    <Badge key={c} variant="outline" className="font-normal">
+                      {c}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Keine Einstiegskriterien hinterlegt.</p>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

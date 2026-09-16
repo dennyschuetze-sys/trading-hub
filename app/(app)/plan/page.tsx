@@ -123,12 +123,12 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
       <div className="grid gap-7">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div className="grid gap-2">
-            <p className="text-[11px] font-semibold tracking-[0.14em] text-profit uppercase">Tagesplan</p>
+            <p className="text-[0.6875rem] font-semibold tracking-[0.14em] text-profit uppercase">Tagesplan</p>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{fullDate(date)}</h1>
             <div className="flex flex-wrap items-center gap-3">
               <span
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] uppercase",
+                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold tracking-[0.08em] uppercase",
                   STATUS[status].className,
                 )}
               >
@@ -165,7 +165,7 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
                     step.progress > 0 && step.progress < 1 && "ring-profit/25",
                   )}
                 >
-                  <span className={cn("text-[11px] font-semibold tabular-nums", step.progress >= 1 ? "text-profit" : "text-muted-foreground/60")}>
+                  <span className={cn("text-[0.6875rem] font-semibold tabular-nums", step.progress >= 1 ? "text-profit" : "text-muted-foreground/60")}>
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <span className="block text-sm font-semibold">{step.title}</span>

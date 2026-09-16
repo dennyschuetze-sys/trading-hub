@@ -40,7 +40,7 @@ export function DailyPnlChart({ days, currency, height = 220 }: { days: DayResul
           <XAxis
             dataKey="date"
             tickFormatter={shortDate}
-            tick={{ fill: "var(--chart-axis)", fontSize: 12 }}
+            tick={{ fill: "var(--chart-axis)", fontSize: "0.75rem" }}
             tickLine={false}
             axisLine={false}
             minTickGap={24}
@@ -49,7 +49,7 @@ export function DailyPnlChart({ days, currency, height = 220 }: { days: DayResul
             domain={[ticks[0], ticks.at(-1)!]}
             ticks={ticks}
             tickFormatter={(v: number) => compactMoney(v, currency)}
-            tick={{ fill: "var(--chart-axis)", fontSize: 12 }}
+            tick={{ fill: "var(--chart-axis)", fontSize: "0.75rem" }}
             tickLine={false}
             axisLine={false}
             width={72}

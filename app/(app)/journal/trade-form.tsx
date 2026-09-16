@@ -10,7 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { ChipSelect } from "@/components/forms/chip-select";
 import { Field, FormSection, SelectField } from "@/components/forms/field";
 import { LocalDateTimeInput } from "@/components/forms/local-datetime-input";
+import { StarRating } from "@/components/forms/star-rating";
 import { useFormAction } from "@/components/forms/use-form-action";
+import { YesNoToggle } from "@/components/forms/yes-no-toggle";
 import {
   EMOTIONS,
   HTF_BIASES,
@@ -28,10 +30,6 @@ import { StrategyChecklist, type StrategyOption } from "./strategy-checklist";
 
 type AccountOption = Pick<Account, "id" | "name" | "market">;
 
-const YES_NO = [
-  { value: "true", label: "Ja" },
-  { value: "false", label: "Nein" },
-];
 type BacktestSessionOption = { id: string; name: string; market: string; strategy_id: string | null; symbols: string[] };
 
 export function TradeForm({
@@ -176,20 +174,10 @@ export function TradeForm({
             {status === "closed" && (
               <>
                 <Field label="SL auf Breakeven gezogen?" htmlFor="moved_to_breakeven">
-                  <SelectField
-                    id="moved_to_breakeven"
-                    options={YES_NO}
-                    placeholder="–"
-                    defaultValue={t?.moved_to_breakeven == null ? "" : String(t.moved_to_breakeven)}
-                  />
+                  <YesNoToggle name="moved_to_breakeven" defaultValue={t?.moved_to_breakeven} labelledBy="moved_to_breakeven-label" />
                 </Field>
                 <Field label="Teilgewinne genommen?" htmlFor="partial_close">
-                  <SelectField
-                    id="partial_close"
-                    options={YES_NO}
-                    placeholder="–"
-                    defaultValue={t?.partial_close == null ? "" : String(t.partial_close)}
-                  />
+                  <YesNoToggle name="partial_close" defaultValue={t?.partial_close} labelledBy="partial_close-label" />
                 </Field>
               </>
             )}
@@ -234,12 +222,14 @@ export function TradeForm({
           <section className="grid gap-3">
             <div>
               <h2 className="font-medium">Strategie</h2>
-              <p className="text-sm text-muted-foreground">Welches Setup war das – und hast du dich an die Checkliste gehalten?</p>
+              <p className="text-sm text-muted-foreground">Welches Setup und welcher Einstieg war das – und hast du dich an die Checkliste gehalten?</p>
             </div>
             <StrategyChecklist
               strategies={strategies}
               defaultStrategyId={t ? t.strategy_id : backtestSession?.strategy_id}
+              defaultCriterion={t?.entry_criterion}
               defaultChecked={checkedItems}
+              isNew={!t}
             />
           </section>
 
@@ -256,23 +246,10 @@ export function TradeForm({
               <SelectField id="emotion" options={EMOTIONS} placeholder="–" defaultValue={t?.emotion ?? ""} />
             </Field>
             <Field label="Plan eingehalten?" htmlFor="followed_plan">
-              <SelectField
-                id="followed_plan"
-                options={[
-                  { value: "true", label: "Ja" },
-                  { value: "false", label: "Nein" },
-                ]}
-                placeholder="–"
-                defaultValue={t?.followed_plan == null ? "" : String(t.followed_plan)}
-              />
+              <YesNoToggle name="followed_plan" defaultValue={t?.followed_plan} labelledBy="followed_plan-label" />
             </Field>
-            <Field label="Bewertung (1–5)" htmlFor="rating">
-              <SelectField
-                id="rating"
-                options={["5", "4", "3", "2", "1"].map((v) => ({ value: v, label: "★".repeat(Number(v)) }))}
-                placeholder="–"
-                defaultValue={t?.rating ? String(t.rating) : ""}
-              />
+            <Field label="Bewertung" htmlFor="rating">
+              <StarRating name="rating" defaultValue={t?.rating} labelledBy="rating-label" />
             </Field>
             <Field label="Tags" htmlFor="tags" hint="Mit Komma trennen, z. B. Breakout, FVG">
               <Input id="tags" name="tags" defaultValue={t?.tags.join(", ")} />

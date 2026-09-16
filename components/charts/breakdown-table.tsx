@@ -51,7 +51,7 @@ export function BreakdownTable({
                   ).map(([label, className]) => (
                     <TableHead
                       key={label || "name"}
-                      className={cn("h-8 text-[11px] font-medium tracking-[0.07em] text-muted-foreground uppercase", className)}
+                      className={cn("h-8 text-[0.6875rem] font-medium tracking-[0.07em] text-muted-foreground uppercase", className)}
                     >
                       {label}
                     </TableHead>

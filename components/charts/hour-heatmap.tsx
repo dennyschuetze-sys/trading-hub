@@ -51,14 +51,14 @@ export function HourHeatmap({ rows, currency }: { rows: BreakdownRow[]; currency
           );
         })}
       </div>
-      <div className="grid gap-1 text-center text-[10px] text-muted-foreground tabular-nums" style={{ gridTemplateColumns: `repeat(${range.length}, minmax(0, 1fr))` }}>
+      <div className="grid gap-1 text-center text-[0.625rem] text-muted-foreground tabular-nums" style={{ gridTemplateColumns: `repeat(${range.length}, minmax(0, 1fr))` }}>
         {range.map((h) => (
           <span key={h} className={range.length > 12 && h % 2 ? "invisible sm:visible" : undefined}>
             {h}
           </span>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-2 text-[0.6875rem] text-muted-foreground">
         <span>Verlust</span>
         <span
           className="h-1.5 w-16 rounded-full"

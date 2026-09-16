@@ -23,7 +23,7 @@ export function ScalePicker({
   return (
     <div className="grid gap-2">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase" id={`${name}-label`}>
+        <span className="text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase" id={`${name}-label`}>
           {label}
         </span>
         <span className={cn("text-xs", value ? "font-medium text-profit" : "text-muted-foreground")}>{value ? labels[value - 1] : "–"}</span>
@@ -55,7 +55,7 @@ export function ScalePicker({
         })}
       </div>
       {showEnds && labels.length >= 3 && (
-        <div className="flex justify-between gap-2 text-[11px] text-muted-foreground/70">
+        <div className="flex justify-between gap-2 text-[0.6875rem] text-muted-foreground/70">
           <span>{labels[0]}</span>
           <span className="hidden sm:inline">{labels[Math.floor(labels.length / 2)]}</span>
           <span>{labels.at(-1)}</span>

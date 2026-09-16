@@ -589,9 +589,9 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
                       <Table>
                         <TableHeader>
                           <TableRow className="hover:bg-transparent">
-                            <TableHead className="h-8 text-[11px] tracking-[0.07em] text-muted-foreground uppercase">Symbol</TableHead>
-                            <TableHead className="h-8 text-right text-[11px] tracking-[0.07em] text-muted-foreground uppercase">Ø SL-Größe</TableHead>
-                            <TableHead className="h-8 text-right text-[11px] tracking-[0.07em] text-muted-foreground uppercase">Trades</TableHead>
+                            <TableHead className="h-8 text-[0.6875rem] tracking-[0.07em] text-muted-foreground uppercase">Symbol</TableHead>
+                            <TableHead className="h-8 text-right text-[0.6875rem] tracking-[0.07em] text-muted-foreground uppercase">Ø SL-Größe</TableHead>
+                            <TableHead className="h-8 text-right text-[0.6875rem] tracking-[0.07em] text-muted-foreground uppercase">Trades</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>

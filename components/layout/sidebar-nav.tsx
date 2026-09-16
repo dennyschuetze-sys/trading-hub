@@ -21,7 +21,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex flex-col gap-6 overflow-y-auto">
         {navGroups.map((group) => (
           <div key={group.title} className="flex flex-col gap-0.5">
-            <p className="px-3 pb-1.5 text-[10.5px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70">
+            <p className="px-3 pb-1.5 text-[0.65625rem] font-medium uppercase tracking-[0.08em] text-muted-foreground/70">
               {group.title}
             </p>
             {group.items.map(({ href, label, icon: Icon }) => {

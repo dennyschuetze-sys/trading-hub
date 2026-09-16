@@ -34,7 +34,7 @@ export function StatTile({
       }
     >
       <CardContent className="grid content-start gap-1 px-5">
-        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
+        <p className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
         <p
           className={cn(
             "font-semibold tracking-tight tabular-nums",
@@ -79,7 +79,7 @@ export function StatStrip({
       <div className={cn("grid flex-1 grid-cols-2 gap-px bg-border sm:grid-cols-3", columns === 6 && "xl:grid-cols-6", title && "border-t")}>
         {items.map((item) => (
           <div key={item.label} className={cn("bg-card px-5", columns === 3 ? "py-5" : "py-4")}>
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{item.label}</p>
+            <p className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{item.label}</p>
             <p
               className={cn(
                 "mt-1.5 font-semibold tabular-nums",

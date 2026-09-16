@@ -45,7 +45,7 @@ export function PlanSection({
 export function PlanLabel({ children, htmlFor, className }: { children: React.ReactNode; htmlFor?: string; className?: string }) {
   const Tag = htmlFor ? "label" : "p";
   return (
-    <Tag htmlFor={htmlFor} className={cn("text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase", className)}>
+    <Tag htmlFor={htmlFor} className={cn("text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase", className)}>
       {children}
     </Tag>
   );

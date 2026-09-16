@@ -62,6 +62,24 @@ export function StrategyForm({
 
           <Separator />
 
+          <section className="grid gap-3">
+            <div>
+              <h2 className="font-medium">Einstiegskriterien</h2>
+              <p className="text-sm text-muted-foreground">
+                Die Auslöser, mit denen du einsteigst – beim Trade wählst du eins davon aus, z. B. „FVG-Retest“ oder „BOS + Pullback“.
+              </p>
+            </div>
+            <ChecklistEditor
+              name="criterion"
+              defaultItems={(s?.entry_criteria ?? []).map((label, i) => ({ id: String(i), label }))}
+              placeholder="z. B. FVG-Retest"
+              itemLabel="Einstiegskriterium"
+              maxLength={100}
+            />
+          </section>
+
+          <Separator />
+
           <section className="grid gap-6">
             <h2 className="font-medium">Regeln</h2>
             <div className="grid gap-6 lg:grid-cols-2">

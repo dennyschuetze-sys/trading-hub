@@ -17,7 +17,9 @@ export function Field({
 }) {
   return (
     <div className={cn("grid content-start gap-1.5", className)}>
-      <Label htmlFor={htmlFor}>{label}</Label>
+      <Label htmlFor={htmlFor} id={`${htmlFor}-label`}>
+        {label}
+      </Label>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>

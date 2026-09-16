@@ -8,10 +8,22 @@ import { Input } from "@/components/ui/input";
 type Item = { key: string; id: string | null; label: string };
 
 /**
- * Bearbeitbare Checkliste. Schickt je Punkt `checklist_id` (leer = neu) und `checklist_label`
+ * Bearbeitbare Liste. Schickt je Punkt `<name>_id` (leer = neu) und `<name>_label`
  * in Reihenfolge – der Server gleicht damit Hinzufügen, Ändern, Sortieren und Löschen ab.
  */
-export function ChecklistEditor({ defaultItems = [] }: { defaultItems?: { id: string; label: string }[] }) {
+export function ChecklistEditor({
+  defaultItems = [],
+  name = "checklist",
+  placeholder = "z. B. Higher-Timeframe-Trend bestätigt",
+  itemLabel = "Checklistenpunkt",
+  maxLength = 200,
+}: {
+  defaultItems?: { id: string; label: string }[];
+  name?: string;
+  placeholder?: string;
+  itemLabel?: string;
+  maxLength?: number;
+}) {
   const [items, setItems] = useState<Item[]>(() =>
     defaultItems.length
       ? defaultItems.map((i) => ({ key: i.id, id: i.id, label: i.label }))
@@ -44,14 +56,14 @@ export function ChecklistEditor({ defaultItems = [] }: { defaultItems?: { id: st
       {items.map((item, index) => (
         <div key={item.key} className="flex items-center gap-1">
           <span className="w-6 text-right text-xs text-muted-foreground tabular-nums">{index + 1}.</span>
-          <input type="hidden" name="checklist_id" value={item.id ?? ""} />
+          <input type="hidden" name={`${name}_id`} value={item.id ?? ""} />
           <Input
-            name="checklist_label"
+            name={`${name}_label`}
             value={item.label}
             onChange={(e) => update(item.key, e.target.value)}
-            placeholder="z. B. Higher-Timeframe-Trend bestätigt"
-            aria-label={`Checklistenpunkt ${index + 1}`}
-            maxLength={200}
+            placeholder={placeholder}
+            aria-label={`${itemLabel} ${index + 1}`}
+            maxLength={maxLength}
             ref={(el) => {
               if (el && item.key === focusKey) {
                 el.focus();

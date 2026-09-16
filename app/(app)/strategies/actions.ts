@@ -51,6 +51,14 @@ export async function saveStrategy(strategyId: string | null, _prev: FormState, 
       status,
       markets: splitList(text(formData, "markets")).map((m) => m.toUpperCase()),
       timeframes: splitList(text(formData, "timeframes")),
+      entry_criteria: [
+        ...new Set(
+          formData
+            .getAll("criterion_label")
+            .map((l) => String(l).trim().slice(0, 100))
+            .filter(Boolean),
+        ),
+      ].slice(0, 30),
       entry_rules: longText(formData, "entry_rules"),
       exit_rules: longText(formData, "exit_rules"),
       risk_rules: longText(formData, "risk_rules"),

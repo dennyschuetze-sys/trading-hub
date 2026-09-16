@@ -89,7 +89,7 @@ export function EquityChart({
             domain={[0, data.length - 1]}
             ticks={xTicks}
             tickFormatter={(i: number) => shortDate(data[Math.round(i)]?.time ?? data[0].time)}
-            tick={{ fill: "var(--chart-axis)", fontSize: 12 }}
+            tick={{ fill: "var(--chart-axis)", fontSize: "0.75rem" }}
             tickLine={false}
             axisLine={{ stroke: "var(--chart-grid)" }}
             minTickGap={24}
@@ -98,7 +98,7 @@ export function EquityChart({
             domain={[ticks[0], ticks.at(-1)!]}
             ticks={ticks}
             tickFormatter={formatTick}
-            tick={{ fill: "var(--chart-axis)", fontSize: 12 }}
+            tick={{ fill: "var(--chart-axis)", fontSize: "0.75rem" }}
             tickLine={false}
             axisLine={false}
             width={72}
@@ -176,7 +176,7 @@ export function EquityPanel({
             ] as const
           ).map(([label, value, className]) => (
             <div key={label}>
-              <dt className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{label}</dt>
+              <dt className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{label}</dt>
               <dd className={cn("text-lg font-semibold tabular-nums sm:text-xl", className)}>{value}</dd>
             </div>
           ))}

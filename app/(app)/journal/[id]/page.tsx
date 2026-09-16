@@ -132,6 +132,7 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
     ["Risiko", money(trade.risk_amount)],
     ["Session", labelFor(SESSIONS, trade.session)],
     ...(tradeNo ? ([["Trade am Tag", `${tradeNo}. Trade`]] as [string, React.ReactNode][]) : []),
+    ["Einstiegskriterium", trade.entry_criterion ?? "–"],
     ["Timeframe", trade.entry_timeframe ?? "–"],
     ["HTF-Trend", labelFor(HTF_BIASES, trade.htf_bias)],
     ["Marktkontext", labelFor(MARKET_CONTEXTS, trade.market_context)],

@@ -112,9 +112,9 @@ export function PnlCalendar({ days, currency, initialMonth }: { days: DayResult[
                     )}
                     style={day ? { background: wash(day.pnl) } : undefined}
                   >
-                    <span className="text-[10px] leading-none text-muted-foreground sm:text-xs">{Number(date.slice(8))}</span>
+                    <span className="text-[0.625rem] leading-none text-muted-foreground sm:text-xs">{Number(date.slice(8))}</span>
                     {day && (
-                      <span className="truncate text-[10px] leading-tight font-medium tabular-nums sm:text-xs">
+                      <span className="truncate text-[0.625rem] leading-tight font-medium tabular-nums sm:text-xs">
                         {cellAmount(day.pnl, currency)}
                       </span>
                     )}
@@ -136,7 +136,7 @@ export function PnlCalendar({ days, currency, initialMonth }: { days: DayResult[
               })}
               <div className="flex aspect-square flex-col justify-center rounded-md bg-muted/40 p-1 text-center sm:aspect-auto sm:h-16">
                 {weekDays.length > 0 && (
-                  <span className="truncate text-[10px] font-medium tabular-nums sm:text-xs">{cellAmount(weekPnl, currency)}</span>
+                  <span className="truncate text-[0.625rem] font-medium tabular-nums sm:text-xs">{cellAmount(weekPnl, currency)}</span>
                 )}
               </div>
             </div>

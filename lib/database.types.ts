@@ -478,6 +478,7 @@ export type Database = {
       strategies: {
         Row: {
           created_at: string;
+          entry_criteria: string[];
           entry_rules: string | null;
           exit_rules: string | null;
           id: string;
@@ -493,6 +494,7 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
+          entry_criteria?: string[];
           entry_rules?: string | null;
           exit_rules?: string | null;
           id?: string;
@@ -641,6 +643,7 @@ export type Database = {
           emotion: string | null;
           entry_price: number | null;
           entry_time: string;
+          entry_criterion: string | null;
           entry_timeframe: string | null;
           exit_price: number | null;
           exit_time: string | null;
@@ -686,6 +689,7 @@ export type Database = {
           emotion?: string | null;
           entry_price?: number | null;
           entry_time: string;
+          entry_criterion?: string | null;
           entry_timeframe?: string | null;
           exit_price?: number | null;
           exit_time?: string | null;
