@@ -153,11 +153,14 @@ export function EquityPanel({
   startingBalance,
   currency,
   height = 320,
+  summary,
 }: {
   points: EquityChartPoint[];
   startingBalance: number;
   currency: string;
   height?: number;
+  /** Eigener Kopfbereich links vom Umschalter statt Start / Aktuell / Höchststand */
+  summary?: React.ReactNode;
 }) {
   const [mode, setMode] = useState<EquityMode>("balance");
   const current = points.at(-1)?.balance ?? startingBalance;
@@ -166,7 +169,8 @@ export function EquityPanel({
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className={cn("flex flex-wrap justify-between gap-4", summary ? "items-start" : "items-end")}>
+        {summary ?? (
         <dl className="flex flex-wrap gap-x-8 gap-y-2">
           {(
             [
@@ -181,6 +185,7 @@ export function EquityPanel({
             </div>
           ))}
         </dl>
+        )}
         <div className="inline-flex rounded-lg border bg-background/60 p-0.5" role="group" aria-label="Darstellung der Kurve">
           {modeLabel.map((m) => (
             <button

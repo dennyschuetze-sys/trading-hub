@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { tradingInsights } from "./insights";
+import { highlight, tradingInsights } from "./insights";
 import type { BreakdownRow } from "./stats";
 
 const row = (key: string, count: number, netPnl: number, label = key): BreakdownRow => ({
@@ -41,5 +41,21 @@ describe("tradingInsights", () => {
       holdTime: [row("1", 4, 20)],
     });
     expect(insights.map((i) => i.title)).toEqual(["Stärkster Tag: 1"]);
+  });
+});
+
+describe("highlight", () => {
+  it("nennt die beste Gruppe nur im Vergleich mehrerer ausreichend großer Gruppen", () => {
+    expect(highlight([row("long", 23, 647, "Long"), row("short", 16, -31, "Short")])).toEqual({
+      state: "found",
+      row: row("long", 23, 647, "Long"),
+    });
+    // Nur eine Gruppe mit genug Trades: keine Aussage
+    expect(highlight([row("15", 1, 161), row("16", 5, 90)])).toEqual({ state: "insufficient" });
+    expect(highlight([])).toEqual({ state: "insufficient" });
+  });
+
+  it("behauptet kein „Bestes“, wenn alle Gruppen im Minus sind", () => {
+    expect(highlight([row("1", 4, -20), row("2", 6, -80)])).toEqual({ state: "none-positive" });
   });
 });

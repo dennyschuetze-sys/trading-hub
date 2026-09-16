@@ -55,3 +55,20 @@ export function tradingInsights(b: {
 
   return insights;
 }
+
+export type Highlight =
+  | { state: "found"; row: BreakdownRow }
+  /** zu wenige Trades oder nur eine vergleichbare Gruppe */
+  | { state: "insufficient" }
+  /** genug Daten, aber keine Gruppe im Plus */
+  | { state: "none-positive" };
+
+/**
+ * Beste Gruppe einer Aufschlüsselung für kompakte Kacheln. „Beste“ setzt einen Vergleich voraus:
+ * mindestens zwei Gruppen mit je MIN_TRADES Trades, sonst gibt es keine Aussage.
+ */
+export function highlight(rows: BreakdownRow[]): Highlight {
+  if (eligible(rows).length < 2) return { state: "insufficient" };
+  const top = best(rows)!;
+  return top.netPnl > 0 ? { state: "found", row: top } : { state: "none-positive" };
+}

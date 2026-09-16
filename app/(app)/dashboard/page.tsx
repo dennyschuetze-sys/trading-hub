@@ -1,53 +1,41 @@
 import Link from "next/link";
-import { ArrowRight, Info, NotebookPen, Plus, Upload, Wallet } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Info, Plus, Upload, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { EquityChart } from "@/components/charts/equity-chart";
+import { Card, CardContent } from "@/components/ui/card";
 import { longDate } from "@/components/charts/format";
 import { PnlCalendar } from "@/components/charts/pnl-calendar";
-import { RuleMeter, StatusBadge } from "@/components/charts/rule-meter";
-import { StatTile } from "@/components/charts/stat-tile";
+import { STATUS_META } from "@/components/charts/rule-meter";
+import { StatSection, StatStrip } from "@/components/charts/stat-tile";
+import { AccountCard } from "@/components/dashboard/accounts";
+import { EquityCard, InsightsCard, PulseCard } from "@/components/dashboard/performance";
+import { RecentTradesCard } from "@/components/dashboard/recent-trades";
+import { AttentionCard, TradingStatusCard, type StatusCheck } from "@/components/dashboard/status";
+import { NewsCard, PlanCard, WeekFocusCard } from "@/components/dashboard/today";
 import { AutoRefresh } from "@/components/layout/auto-refresh";
 import { PageHeader } from "@/components/layout/page-header";
-import { RiskStatusCard } from "@/components/risk/risk-status-card";
-import { WeekGoalsCard } from "@/components/goals/week-goals-card";
+import { eventTime } from "@/components/news/event-list";
+import { berlinDay, filterEvents, nextEvent } from "@/lib/calendar";
+import { attentionItems, currentStreak, recentForm, tradingStatus } from "@/lib/dashboard";
+import { planStatus } from "@/lib/daily-plan";
 import { buildIndex, computeStreaks, scoreDays } from "@/lib/discipline";
+import { getCalendar, getNewsSettings } from "@/lib/feeds";
 import { evaluateGoal, formatMetric } from "@/lib/goals";
 import { loadDisciplineData } from "@/lib/goals-queries";
+import { MIN_TRADES, highlight } from "@/lib/insights";
 import { periodDays, periodStart, weekday } from "@/lib/periods";
-import { buildRiskToday, getRiskRules, rememberEvents } from "@/lib/risk-queries";
-import { TodayPlanCard } from "@/components/layout/today-plan-card";
-import { TodayEventsCard } from "@/components/news/today-events-card";
-import { berlinDay, filterEvents, nextEvent } from "@/lib/calendar";
-import { getCalendar, getNewsSettings } from "@/lib/feeds";
 import { evaluateAccount } from "@/lib/prop-rules";
 import { fetchStatTrades } from "@/lib/queries";
+import { buildRiskToday, getRiskRules, rememberEvents } from "@/lib/risk-queries";
+import { hasAnyRule } from "@/lib/risk-rules";
 import { rangeStart, resolveScope } from "@/lib/scope";
-import { berlinParts, closeTime, closedTrades, dailyResults, equityCurve, type StatTrade } from "@/lib/stats";
+import { berlinParts, closeTime, closedTrades, dailyResults, equityCurve, maxDrawdown, standardBreakdowns, summarize } from "@/lib/stats";
 import { createClient } from "@/lib/supabase/server";
-import { PHASES, formatDateTime, formatMoney, labelFor, pnlClass } from "@/lib/trading";
+import { PHASES, SESSIONS, TIME_ZONE, formatMoney, formatNumber, formatR, labelFor, plural } from "@/lib/trading";
 
-/** Summen je Währung, z. B. „+120,00 € · −40,00 $“ – Währungen werden nie vermischt. */
-function sumByCurrency(trades: StatTrade[], currencyOf: Map<string, string>) {
-  const sums = new Map<string, number>();
-  for (const t of closedTrades(trades)) {
-    const cur = currencyOf.get(t.account_id) ?? "USD";
-    sums.set(cur, Math.round(((sums.get(cur) ?? 0) + t.net_pnl!) * 100) / 100);
-  }
-  return [...sums.entries()];
-}
+const clock = (iso: string) =>
+  new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: TIME_ZONE }).format(new Date(iso));
 
-function moneyList(sums: [string, number][]) {
-  return sums.length ? sums.map(([cur, v]) => formatMoney(v, cur, true)).join(" · ") : "–";
-}
-
-function toneOf(sums: [string, number][]) {
-  if (!sums.length) return null;
-  if (sums.every(([, v]) => v > 0)) return "profit" as const;
-  if (sums.every(([, v]) => v < 0)) return "loss" as const;
-  return null;
-}
+const toneOf = (v: number | null | undefined) => (v == null || v === 0 ? null : v > 0 ? ("profit" as const) : ("loss" as const));
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -86,8 +74,8 @@ export default async function DashboardPage() {
   }
 
   const now = new Date();
-  const currencyOf = new Map(list.map((a) => [a.id, a.currency]));
-  const today = berlinParts(now.toISOString()).date;
+  const nowIso = now.toISOString();
+  const today = berlinParts(nowIso).date;
   const [{ data: todayPlan }, calendar, newsSettings, riskRules] = await Promise.all([
     supabase.from("daily_plans").select("*").eq("plan_date", today).maybeSingle(),
     getCalendar(),
@@ -97,7 +85,95 @@ export default async function DashboardPage() {
   await rememberEvents(supabase, calendar.events);
   const risk = buildRiskToday(list, trades, riskRules, calendar.events, newsSettings.calendarCurrencies, now);
 
-  // Woche: Disziplin, Ziele, Plan-Serie
+  const subtitleOf = (a: (typeof list)[number]) => [a.firm, labelFor(PHASES, a.phase)].filter(Boolean).join(" · ");
+  const nameOf = new Map(list.map((a) => [a.id, a.name]));
+  const currencyOf = new Map(list.map((a) => [a.id, a.currency]));
+
+  // Fokus: Account mit dem letzten Trade – Performance, Equity und Kalender beziehen sich darauf
+  const focus = resolveScope(list, undefined, trades)!;
+  const focusAccount = list.find((a) => a.id === focus.accountIds[0])!;
+  const focusTrades = trades.filter((t) => t.account_id === focusAccount.id);
+  const currency = focusAccount.currency;
+  const money = (v: number | null, signed = false) => formatMoney(v, currency, signed);
+
+  // 1. Status ------------------------------------------------------------------------
+  const statusRow = risk.rows.find((r) => r.id === focusAccount.id) ?? risk.rows[0] ?? null;
+  const statusAccount = statusRow ? list.find((a) => a.id === statusRow.id)! : null;
+  const status = tradingStatus(statusRow, risk.lock);
+  const rulesConfigured = hasAnyRule(riskRules);
+  const hasPropLimits = Boolean(statusRow && (statusRow.prop.dailyLoss || statusRow.prop.drawdown));
+
+  const highEvents = filterEvents(calendar.events, newsSettings.calendarCurrencies, "high").filter((e) => e.impact === "high");
+  const nextHighToday = highEvents.find((e) => e.time > nowIso && berlinDay(e.time) === today) ?? null;
+  const planState = planStatus(todayPlan);
+  const tradesEnteredToday = focusTrades.filter((t) => berlinParts(t.entry_time).date === today).length;
+
+  const checks: StatusCheck[] = [
+    planState === "missing"
+      ? { label: "Tagesplan", tone: "open", text: "Offen" }
+      : { label: "Tagesplan", tone: "ok", text: planState === "reviewed" ? "Plan & Review erledigt" : "Erstellt" },
+    rulesConfigured || hasPropLimits
+      ? (() => {
+          const ruleStatus = tradingStatus(statusRow, null);
+          return {
+            label: "Trading-Regeln",
+            tone: ruleStatus === "ok" ? "ok" : ruleStatus === "warning" ? "warning" : "danger",
+            text: STATUS_META[ruleStatus].label,
+          } satisfies StatusCheck;
+        })()
+      : { label: "Trading-Regeln", tone: "open", text: "Keine Regeln hinterlegt" },
+    risk.lock?.state === "active"
+      ? { label: "High-Impact News", tone: "danger", text: `Sperre bis ${clock(risk.lock.until)} Uhr` }
+      : risk.lock?.state === "soon"
+        ? { label: "High-Impact News", tone: "warning", text: `Sperre ab ${clock(risk.lock.startsAt)} Uhr` }
+        : nextHighToday
+          ? {
+              label: "High-Impact News",
+              tone: Date.parse(nextHighToday.time) - now.getTime() <= 60 * 60000 ? "warning" : "open",
+              text: `${eventTime(nextHighToday)} · ${nextHighToday.currency}`,
+            }
+          : { label: "High-Impact News", tone: "ok", text: "Keine weiteren heute" },
+  ];
+
+  const attention = attentionItems({
+    now,
+    isWorkday: weekday(today) <= 5,
+    planExists: Boolean(todayPlan),
+    nextHighImpact: nextHighToday,
+    lock: risk.lock,
+    focus: statusRow,
+    others: risk.rows.filter((r) => r.id !== statusRow?.id).map((r) => ({ name: r.name, status: tradingStatus(r, null) })),
+    streak: currentStreak(statusAccount ? trades.filter((t) => t.account_id === statusAccount.id) : []),
+    rulesConfigured,
+  });
+
+  // 2./3. Performance ------------------------------------------------------------------
+  const closed = closedTrades(focusTrades);
+  const summary = summarize(focusTrades);
+  const curve = equityCurve(focusTrades, focusAccount.starting_balance);
+  const drawdown = maxDrawdown(curve);
+  const closedToday = closed.filter((t) => berlinParts(closeTime(t)).date === today);
+  const monthStart = rangeStart("mtd", now)!;
+  const closedMonth = closed.filter((t) => closeTime(t) >= monthStart);
+  const sum = (list: typeof closed) => Math.round(list.reduce((s, t) => s + t.net_pnl!, 0) * 100) / 100;
+  const todayPnl = sum(closedToday);
+  const monthPnl = sum(closedMonth);
+
+  const rById = new Map(focusTrades.map((t) => [t.id, t.r_multiple]));
+  const equityPoints = curve.map((p) => ({ time: p.time, balance: p.balance, pnl: p.pnl, r: p.tradeId ? (rById.get(p.tradeId) ?? null) : null }));
+  const peak = Math.max(focusAccount.starting_balance, ...curve.map((p) => p.balance));
+  const form = recentForm(focusTrades);
+
+  // 4. Insights ----------------------------------------------------------------------
+  const breakdowns = standardBreakdowns(focusTrades);
+  const insights = [
+    { label: "Beste Session", highlight: highlight(breakdowns.session) },
+    { label: "Beste Richtung", highlight: highlight(breakdowns.direction) },
+    { label: "Bester Wochentag", highlight: highlight(breakdowns.weekday) },
+    { label: "Stärkste Einstiegszeit", highlight: highlight(breakdowns.hour) },
+  ];
+
+  // 5. Heute & Woche -------------------------------------------------------------------
   const week = periodStart(today, "week");
   const [{ data: discipline }, { data: weekGoals }, { data: weekReview }] = await Promise.all([
     loadDisciplineData(supabase, { trades, rules: riskRules }),
@@ -110,31 +186,37 @@ export default async function DashboardPage() {
     const result = evaluateGoal(g, weekCtx);
     return { id: g.id, title: g.title, status: result.status, valueText: formatMetric(g.metric, result.value, currencyOf.get(g.account_id ?? "")) };
   });
+  const closedWeek = closed.filter((t) => berlinParts(closeTime(t)).date >= week);
   const calendarEvents = filterEvents(calendar.events, newsSettings.calendarCurrencies, newsSettings.minImpact);
-  const weekStart = (() => {
-    const d = new Date(`${today}T12:00:00Z`);
-    d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
-    return d.toISOString().slice(0, 10);
-  })();
-  const monthStart = rangeStart("mtd", now)!;
 
-  const closed = closedTrades(trades);
-  const todaySums = sumByCurrency(closed.filter((t) => berlinParts(closeTime(t)).date === today), currencyOf);
-  const weekSums = sumByCurrency(closed.filter((t) => berlinParts(closeTime(t)).date >= weekStart), currencyOf);
-  const monthSums = sumByCurrency(closed.filter((t) => closeTime(t) >= monthStart), currencyOf);
-  const todayCount = closed.filter((t) => berlinParts(closeTime(t)).date === today).length;
+  // 6. Accounts ------------------------------------------------------------------------
+  const activeAccounts = list
+    .filter((a) => a.status === "active")
+    .map((a) => ({ account: a, rules: evaluateAccount(a, trades.filter((t) => t.account_id === a.id), now) }));
 
-  const active = list.filter((a) => a.status === "active");
-  const ruleCards = active.map((a) => ({
-    account: a,
-    rules: evaluateAccount(a, trades.filter((t) => t.account_id === a.id), now),
-  }));
-
-  const focus = resolveScope(list, undefined, trades)!;
-  const focusAccount = list.find((a) => a.id === focus.accountIds[0])!;
-  const focusTrades = trades.filter((t) => t.account_id === focusAccount.id);
-  const recent = [...closed].reverse().slice(0, 6);
-  const nameOf = new Map(list.map((a) => [a.id, a.name]));
+  // 7. Letzte Trades (über alle Accounts) mit Session und Setup ----------------------------
+  const recent = closedTrades(trades).reverse().slice(0, 6);
+  const { data: recentDetails } = recent.length
+    ? await supabase.from("trades").select("id, entry_criterion, strategies(name)").in("id", recent.map((t) => t.id))
+    : { data: [] };
+  const detailOf = new Map((recentDetails ?? []).map((d) => [d.id, d]));
+  // Account-Namen nur, wenn die Liste Trades aus mehreren Accounts enthält
+  const mixedAccounts = new Set(recent.map((t) => t.account_id)).size > 1;
+  const recentTrades = recent.map((t) => {
+    const detail = detailOf.get(t.id);
+    const setup = detail?.entry_criterion ?? detail?.strategies?.name ?? null;
+    return {
+      id: t.id,
+      symbol: t.symbol,
+      direction: t.direction,
+      closedAt: closeTime(t),
+      netPnl: t.net_pnl!,
+      r: t.r_multiple,
+      currency: currencyOf.get(t.account_id) ?? "USD",
+      tags: [t.session ? labelFor(SESSIONS, t.session) : null, setup].filter((x): x is string => Boolean(x)),
+      account: mixedAccounts ? nameOf.get(t.account_id) : undefined,
+    };
+  });
 
   return (
     <>
@@ -154,192 +236,138 @@ export default async function DashboardPage() {
       </PageHeader>
 
       <AutoRefresh />
-      <div className="grid gap-6">
-        <RiskStatusCard rows={risk.rows} lock={risk.lock} rules={riskRules} now={now} showLink />
+      <div className="grid gap-10">
+        <StatSection title="Status" question="Bin ich bereit und darf ich noch traden?">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
+            <TradingStatusCard
+              account={statusAccount ? { name: statusAccount.name, subtitle: subtitleOf(statusAccount) } : null}
+              row={statusRow}
+              status={status}
+              checks={checks}
+            />
+            <AttentionCard items={attention} />
+          </div>
+        </StatSection>
 
-        <section className="grid gap-3 sm:grid-cols-3" aria-label="Ergebnisse">
-          <StatTile label="Heute" value={moneyList(todaySums)} tone={toneOf(todaySums)} hint={`${todayCount} ${todayCount === 1 ? "Trade" : "Trades"}`} />
-          <StatTile label="Diese Woche" value={moneyList(weekSums)} tone={toneOf(weekSums)} hint="seit Montag" />
-          <StatTile label="Dieser Monat" value={moneyList(monthSums)} tone={toneOf(monthSums)} hint="seit dem 1." />
-        </section>
+        <StatSection title="Performance" question="Wie läuft mein Trading?" hint={`${focusAccount.name} · alle Trades`}>
+          <StatStrip
+            items={[
+              {
+                label: "Heute P&L",
+                value: closedToday.length ? money(todayPnl, true) : "–",
+                muted: !closedToday.length,
+                tone: toneOf(closedToday.length ? todayPnl : null),
+                hint: closedToday.length ? plural(closedToday.length, "Trade", "Trades") : "Noch kein Trade geschlossen",
+              },
+              {
+                label: "Dieser Monat",
+                value: closedMonth.length ? money(monthPnl, true) : "–",
+                muted: !closedMonth.length,
+                tone: toneOf(closedMonth.length ? monthPnl : null),
+                hint: plural(closedMonth.length, "Trade", "Trades"),
+              },
+              {
+                label: "Winrate",
+                value: summary.winRate == null ? "–" : `${formatNumber(summary.winRate * 100, 0)} %`,
+                muted: summary.winRate == null,
+                hint: `${summary.wins} Gewinner · ${summary.losses} Verlierer`,
+              },
+              {
+                label: "Profit Factor",
+                value: summary.profitFactor == null ? "–" : formatNumber(summary.profitFactor, 2),
+                muted: summary.profitFactor == null,
+                hint: "Gewinne ÷ Verluste",
+              },
+              {
+                label: "Ø R / Trade",
+                value: formatR(summary.avgR),
+                muted: summary.avgR == null,
+                tone: toneOf(summary.avgR),
+                hint: summary.rCount ? `aus ${plural(summary.rCount, "Trade", "Trades")}` : "Risiko eintragen",
+              },
+              {
+                label: "Max. Drawdown",
+                value: drawdown.amount ? money(-drawdown.amount) : money(0),
+                tone: drawdown.amount ? "loss" : null,
+                hint: drawdown.amount ? `${formatNumber(drawdown.percent * 100, 1)} % vom Höchststand` : "Kein Rückgang",
+              },
+            ]}
+          />
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)]">
+            <EquityCard
+              accountId={focusAccount.id}
+              accountName={focusAccount.name}
+              points={equityPoints}
+              startingBalance={focusAccount.starting_balance}
+              currency={currency}
+              facts={[
+                { label: "Trades", value: String(summary.count) },
+                { label: "Handelstage", value: String(summary.tradingDays) },
+                { label: "Höchststand", value: money(peak) },
+                { label: "Ø pro Trade", value: money(summary.expectancy, true), className: toneOf(summary.expectancy) === "loss" ? "text-loss" : toneOf(summary.expectancy) === "profit" ? "text-profit" : undefined },
+              ]}
+            />
+            <PulseCard results={form.results} summary={form.summary} streak={currentStreak(focusTrades)} currency={currency} />
+          </div>
+        </StatSection>
 
-        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-          <TodayPlanCard
-            plan={todayPlan}
-            tradesToday={trades.filter((t) => berlinParts(t.entry_time).date === today).length}
-          />
-          <WeekGoalsCard
-            score={scoreDays(disciplineIndex, periodDays(week, "week"), today).score}
-            goals={weekGoalRows}
-            planStreak={computeStreaks(disciplineIndex, today).plan.current}
-            hasReview={Boolean(weekReview)}
-            isWeekend={weekday(today) > 5}
-          />
-          <TodayEventsCard
-            events={calendarEvents.filter((e) => berlinDay(e.time) === today)}
-            next={nextEvent(calendarEvents, now)}
-            now={now}
-            error={calendar.error}
-          />
-        </div>
+        <StatSection title="Insights" question="Was zeigen meine Daten?">
+          <InsightsCard items={insights} currency={currency} minTrades={MIN_TRADES} statsHref={`/stats?scope=${focusAccount.id}`} />
+        </StatSection>
 
-        {ruleCards.length > 0 && (
-          <section className="grid gap-3" aria-label="Account-Limits">
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <h2 className="text-lg font-semibold">Accounts & Limits</h2>
-              <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Info className="size-3.5" /> Aus geschlossenen Trades berechnet – offene Positionen zählen bei der Prop Firm mit.
-              </p>
+        <StatSection title="Heute" question="Was muss ich beachten?">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <PlanCard plan={todayPlan} tradesToday={tradesEnteredToday} />
+            <NewsCard
+              events={calendarEvents.filter((e) => berlinDay(e.time) === today)}
+              next={nextEvent(highEvents, now)}
+              now={now}
+              currencies={newsSettings.calendarCurrencies}
+              error={calendar.error}
+            />
+            <WeekFocusCard
+              pnl={sum(closedWeek)}
+              trades={closedWeek.length}
+              currency={currency}
+              score={scoreDays(disciplineIndex, periodDays(week, "week"), today).score}
+              planStreak={computeStreaks(disciplineIndex, today).plan.current}
+              goals={weekGoalRows}
+              showReviewHint={!weekReview && weekday(today) > 5}
+            />
+          </div>
+        </StatSection>
+
+        {activeAccounts.length > 0 && (
+          <StatSection title="Accounts" question="Wo stehe ich?" hint={plural(activeAccounts.length, "aktiver Account", "aktive Accounts")}>
+            <div className={activeAccounts.length > 2 ? "grid gap-4 md:grid-cols-2 2xl:grid-cols-3" : "grid gap-4 md:grid-cols-2"}>
+              {activeAccounts.map(({ account: a, rules }) => (
+                <AccountCard
+                  key={a.id}
+                  account={{ ...a, subtitle: subtitleOf(a) }}
+                  rules={rules}
+                />
+              ))}
             </div>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {ruleCards.map(({ account: a, rules: r }) => {
-                const money = (v: number | null, signed = false) => formatMoney(v, a.currency, signed);
-                const hasRules = r.dailyLoss || r.drawdown || r.target;
-                return (
-                  <Card key={a.id} className="gap-4">
-                    <CardHeader>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <CardTitle className="truncate">{a.name}</CardTitle>
-                          <CardDescription>
-                            {[a.firm, labelFor(PHASES, a.phase)].filter(Boolean).join(" · ")}
-                          </CardDescription>
-                        </div>
-                        {hasRules && <StatusBadge status={r.status} />}
-                      </div>
-                      <div className="flex items-baseline justify-between gap-2 pt-1">
-                        <span className="text-2xl font-semibold tracking-tight">{money(r.balance)}</span>
-                        <span className="text-sm text-muted-foreground">
-                          heute <span className={`font-medium ${pnlClass(r.todayPnl)}`}>{money(r.todayPnl, true)}</span>
-                        </span>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="grid gap-4">
-                      {r.dailyLoss && (
-                        <RuleMeter
-                          label="Tagesverlust"
-                          ratio={r.dailyLoss.ratio}
-                          status={r.dailyLoss.status}
-                          detail={`noch ${money(r.dailyLoss.remaining)} von ${money(r.dailyLoss.limit)}`}
-                        />
-                      )}
-                      {r.drawdown && (
-                        <RuleMeter
-                          label={a.drawdown_type === "static" ? "Max. Drawdown" : "Max. Drawdown (trailing)"}
-                          ratio={r.drawdown.ratio}
-                          status={r.drawdown.status}
-                          detail={`Grenze bei ${money(r.drawdown.floor)} · noch ${money(r.drawdown.remaining)}`}
-                        />
-                      )}
-                      {r.target && (
-                        <div className="grid gap-1.5">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Gewinnziel</span>
-                            <span className="text-xs font-medium">
-                              {r.target.reached ? "Erreicht" : `${Math.round(r.target.progress * 100)} %`}
-                            </span>
-                          </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-muted">
-                            <div className="h-full rounded-full bg-chart-line" style={{ width: `${Math.round(r.target.progress * 100)}%` }} />
-                          </div>
-                          <p className="text-xs text-muted-foreground tabular-nums">
-                            {r.target.reached ? `${money(r.netPnl, true)} erzielt` : `noch ${money(r.target.remaining)} bis ${money(a.profit_target)}`}
-                            {r.tradingDays.required ? ` · ${r.tradingDays.done}/${r.tradingDays.required} Handelstage` : ""}
-                          </p>
-                        </div>
-                      )}
-                      {!hasRules && (
-                        <p className="text-sm text-muted-foreground">
-                          Keine Regeln hinterlegt.{" "}
-                          <Link href={`/accounts/${a.id}/edit`} className="underline underline-offset-4 hover:text-foreground">
-                            Limits eintragen
-                          </Link>
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </section>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Info className="size-3.5 shrink-0" aria-hidden /> Aus geschlossenen Trades berechnet – offene Positionen zählen bei der Prop Firm mit.
+            </p>
+          </StatSection>
         )}
 
-        <div className="grid gap-6 xl:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2">
+        <StatSection title="Verlauf" question="Was ist zuletzt passiert?">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <Card className="gap-3 py-5">
+              <CardContent className="grid gap-3 px-5">
                 <div>
-                  <CardTitle>Equity · {focusAccount.name}</CardTitle>
-                  <CardDescription>
-                    Account mit dem letzten Trade · Start {formatMoney(focusAccount.starting_balance, focusAccount.currency)}
-                  </CardDescription>
+                  <p className="text-sm font-semibold">Trading-Kalender</p>
+                  <p className="text-xs text-muted-foreground">{focusAccount.name}</p>
                 </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={`/stats?scope=${focusAccount.id}`}>
-                    Statistiken <ArrowRight className="size-4" />
-                  </Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <EquityChart
-                points={equityCurve(focusTrades, focusAccount.starting_balance)}
-                startingBalance={focusAccount.starting_balance}
-                currency={focusAccount.currency}
-                height={240}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Kalender · {focusAccount.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <PnlCalendar days={dailyResults(focusTrades)} currency={focusAccount.currency} />
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle>Letzte Trades</CardTitle>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/journal">
-                  Journal <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {!recent.length ? (
-              <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-muted-foreground">
-                <NotebookPen className="size-6" /> Noch keine Trades
-              </div>
-            ) : (
-              <ul className="divide-y">
-                {recent.map((t) => (
-                  <li key={t.id}>
-                    <Link href={`/journal/${t.id}`} className="flex items-center gap-3 py-2.5 hover:bg-muted/40">
-                      <Badge variant="outline" className="w-14 justify-center">
-                        {t.direction === "long" ? "Long" : "Short"}
-                      </Badge>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{t.symbol}</p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {formatDateTime(closeTime(t))} · {nameOf.get(t.account_id)}
-                        </p>
-                      </div>
-                      <span className={`font-medium tabular-nums ${pnlClass(t.net_pnl)}`}>
-                        {formatMoney(t.net_pnl, currencyOf.get(t.account_id), true)}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                <PnlCalendar days={dailyResults(focusTrades)} currency={currency} />
+              </CardContent>
+            </Card>
+            <RecentTradesCard trades={recentTrades} />
+          </div>
+        </StatSection>
       </div>
     </>
   );

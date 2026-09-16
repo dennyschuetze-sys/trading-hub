@@ -102,11 +102,14 @@ export function StatStrip({
 /** Überschrift eines Seitenbereichs mit feiner Linie. */
 export function StatSection({
   title,
+  question,
   hint,
   children,
   className,
 }: {
   title: string;
+  /** Leitfrage des Bereichs, dezent neben der Überschrift */
+  question?: string;
   hint?: string;
   children: React.ReactNode;
   className?: string;
@@ -118,6 +121,7 @@ export function StatSection({
         <h2 id={id} className="text-xs font-semibold uppercase tracking-[0.12em]">
           {title}
         </h2>
+        {question && <p className="hidden text-xs text-muted-foreground italic md:block">{question}</p>}
         <div className="h-px flex-1 bg-border" aria-hidden />
         {hint && <span className="hidden text-xs text-muted-foreground sm:inline">{hint}</span>}
       </div>
