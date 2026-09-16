@@ -4,16 +4,25 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { BreakdownRow } from "@/lib/stats";
 import { formatMoney, formatR } from "@/lib/trading";
 
+const MIN_SPAN = 12;
+
 /**
  * Netto P&L je Einstiegsstunde als Heatmap (Türkis = Gewinn, Rot = Verlust, Deckkraft nach Betrag).
- * Gezeigt wird der Bereich von der ersten bis zur letzten gehandelten Stunde; Details im Tooltip.
+ * Gezeigt wird der Bereich von der ersten bis zur letzten gehandelten Stunde (mind. 12 Stunden); Details im Tooltip.
  */
 export function HourHeatmap({ rows, currency }: { rows: BreakdownRow[]; currency: string }) {
   if (!rows.length) return <p className="text-sm text-muted-foreground">Noch keine Daten.</p>;
   const byHour = new Map(rows.map((r) => [Number(r.key), r]));
   const hours = [...byHour.keys()];
-  const first = Math.min(...hours);
-  const last = Math.max(...hours);
+  let first = Math.min(...hours);
+  let last = Math.max(...hours);
+  // Mindestens MIN_SPAN Stunden zeigen, damit wenige Trades keine riesigen Zellen erzeugen.
+  const missing = MIN_SPAN - (last - first + 1);
+  if (missing > 0) {
+    first = Math.max(0, first - Math.ceil(missing / 2));
+    last = Math.min(23, first + MIN_SPAN - 1);
+    first = Math.max(0, last - MIN_SPAN + 1);
+  }
   const range = Array.from({ length: last - first + 1 }, (_, i) => first + i);
   const maxAbs = Math.max(1, ...rows.map((r) => Math.abs(r.netPnl)));
 
