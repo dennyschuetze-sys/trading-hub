@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /** Ja/Nein als zwei Schalter; erneutes Klicken hebt die Auswahl auf (= keine Angabe). Schickt `name` als "true"/"false"/"". */
@@ -9,10 +8,14 @@ export function YesNoToggle({
   name,
   defaultValue,
   labelledBy,
+  size = "default",
+  onChange,
 }: {
   name: string;
   defaultValue?: boolean | null;
   labelledBy?: string;
+  size?: "default" | "lg";
+  onChange?: (value: boolean | null) => void;
 }) {
   const [value, setValue] = useState<boolean | null>(defaultValue ?? null);
 
@@ -22,19 +25,31 @@ export function YesNoToggle({
       {([true, false] as const).map((option) => {
         const active = value === option;
         return (
-          <Button
+          <button
             key={String(option)}
             type="button"
-            variant="outline"
             role="radio"
             aria-checked={active}
-            onClick={() => setValue(active ? null : option)}
-            className={cn(active && "border-foreground/60 bg-secondary font-medium text-foreground hover:bg-secondary")}
+            onClick={() => {
+              const next = active ? null : option;
+              setValue(next);
+              onChange?.(next);
+            }}
+            className={cn(segmentClass(active), size === "lg" ? "h-12" : "h-10")}
           >
             {option ? "Ja" : "Nein"}
-          </Button>
+          </button>
         );
       })}
     </div>
   );
 }
+
+/** Gemeinsamer Stil für Auswahl-Segmente: Türkis = ausgewählt (keine Gewinn/Verlust-Aussage). */
+export const segmentClass = (active: boolean) =>
+  cn(
+    "inline-flex items-center justify-center gap-1.5 rounded-lg border text-sm font-semibold tracking-wide uppercase transition-colors outline-none focus-visible:ring-3 focus-visible:ring-profit/30",
+    active
+      ? "border-profit bg-profit/12 text-profit"
+      : "border-input bg-transparent text-muted-foreground hover:border-foreground/25 hover:text-foreground dark:bg-input/30",
+  );

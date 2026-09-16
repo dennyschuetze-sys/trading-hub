@@ -16,14 +16,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { SCREENSHOT_TYPES, checkScreenshots, uploadScreenshots } from "@/lib/screenshot-upload";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { deleteScreenshot } from "../actions";
 
 export type ScreenshotView = { id: string; url: string };
-
-const ALLOWED = ["image/png", "image/jpeg", "image/webp", "image/gif"];
-const MAX_BYTES = 10 * 1024 * 1024;
 
 export function Screenshots({
   tradeId,
@@ -44,36 +42,15 @@ export function Screenshots({
 
   const upload = useCallback(
     async (files: File[]) => {
-      const images = files.filter((f) => ALLOWED.includes(f.type));
-      if (!images.length) {
-        toast.error("Bitte PNG, JPG, WebP oder GIF verwenden.");
-        return;
-      }
-      const tooBig = images.find((f) => f.size > MAX_BYTES);
-      if (tooBig) {
-        toast.error(`„${tooBig.name}“ ist größer als 10 MB.`);
+      const { images, error } = checkScreenshots(files);
+      if (error) {
+        toast.error(error);
         return;
       }
 
       setUploading(true);
-      const supabase = createClient();
       try {
-        for (const file of images) {
-          const ext = file.type.split("/")[1].replace("jpeg", "jpg");
-          const path = `${userId}/${tradeId}/${crypto.randomUUID()}.${ext}`;
-          const { error: uploadError } = await supabase.storage
-            .from("screenshots")
-            .upload(path, file, { contentType: file.type });
-          if (uploadError) throw uploadError;
-
-          const { error: insertError } = await supabase
-            .from("trade_screenshots")
-            .insert({ trade_id: tradeId, storage_path: path });
-          if (insertError) {
-            await supabase.storage.from("screenshots").remove([path]);
-            throw insertError;
-          }
-        }
+        await uploadScreenshots(createClient(), { userId, tradeId, files: images });
         toast.success(images.length === 1 ? "Screenshot gespeichert" : `${images.length} Screenshots gespeichert`);
         router.refresh();
       } catch (e) {
@@ -136,7 +113,7 @@ export function Screenshots({
         <input
           ref={inputRef}
           type="file"
-          accept={ALLOWED.join(",")}
+          accept={SCREENSHOT_TYPES.join(",")}
           multiple
           hidden
           onChange={(e) => {

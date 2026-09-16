@@ -166,6 +166,8 @@ export async function saveTrade(
   revalidatePath("/accounts");
   revalidatePath("/strategies");
   revalidatePath("/backtesting", "layout");
+  // Vorgemerkte Screenshots lädt das Formular hoch und leitet danach selbst weiter
+  if (formData.get("after_save") === "upload") return { success: "Trade gespeichert", id: data.id };
   redirect(`/journal/${data.id}`);
 }
 

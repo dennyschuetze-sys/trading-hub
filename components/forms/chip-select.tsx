@@ -13,20 +13,25 @@ export function ChipSelect({
   options,
   defaultValue = [],
   tone = "loss",
+  onChange,
 }: {
   name: string;
   options: Option[];
   defaultValue?: string[];
   /** „loss“ für Fehler-Tags, „neutral“ für normale Auswahl */
   tone?: "loss" | "neutral";
+  onChange?: (values: string[]) => void;
 }) {
   const [selected, setSelected] = useState<string[]>(defaultValue);
   // Werte, die nicht (mehr) in der Liste stehen, trotzdem anzeigen
   const known = options.map(valueOf);
   const all: Option[] = [...options, ...defaultValue.filter((v) => !known.includes(v))];
 
-  const toggle = (value: string) =>
-    setSelected((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+  const toggle = (value: string) => {
+    const next = selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value];
+    setSelected(next);
+    onChange?.(next);
+  };
 
   return (
     <div className="flex flex-wrap gap-2">

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckCircle2, FlaskConical, Pencil, ShieldAlert, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Copy, FlaskConical, Pencil, ShieldAlert, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -177,6 +177,13 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
           </div>
         </div>
         <div className="flex gap-2">
+          {!session && (
+            <Button variant="ghost" asChild>
+              <Link href={`/journal/new?vorlage=${trade.id}`} title="Neuen Trade mit Account, Symbol, Setup, Risiko und Tags dieses Trades anlegen">
+                <Copy className="size-4" /> Als Vorlage
+              </Link>
+            </Button>
+          )}
           <Button variant="outline" asChild>
             <Link href={`/journal/${trade.id}/edit`}>
               <Pencil className="size-4" /> Bearbeiten

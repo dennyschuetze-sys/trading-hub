@@ -10,7 +10,8 @@ import type { FormState } from "@/lib/form-data";
  */
 export function useFormAction(
   action: (prev: FormState, formData: FormData) => Promise<FormState>,
-  prepare?: (formData: FormData) => void,
+  /** Werte vor dem Absenden anpassen; `false` bricht das Absenden ab (z. B. Prüfung im Browser) */
+  prepare?: (formData: FormData) => void | boolean,
 ) {
   const [state, dispatch, actionPending] = useActionState(action, {});
   const [transitionPending, startTransition] = useTransition();
@@ -24,7 +25,7 @@ export function useFormAction(
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    prepare?.(formData);
+    if (prepare?.(formData) === false) return;
     startTransition(() => dispatch(formData));
   };
 
