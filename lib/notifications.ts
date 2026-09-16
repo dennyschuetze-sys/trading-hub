@@ -1,4 +1,4 @@
-import type { CalendarEvent } from "@/lib/calendar";
+import { berlinDay, type CalendarEvent } from "@/lib/calendar";
 import type { Tables } from "@/lib/database.types";
 import type { AccountRules } from "@/lib/prop-rules";
 import { TIME_ZONE, formatMoney } from "@/lib/trading";
@@ -92,17 +92,16 @@ export function planNotifications(input: PlannerInput): PlannedMessage[] {
     return today.minutes >= target && today.minutes < target + REMINDER_WINDOW_MIN;
   };
 
+  const wanted = new Set(input.currencies.map((c) => c.toUpperCase()));
+  /** High-Impact-Termin einer der eigenen Währungen? „ALL“-Termine wie Gipfel zählen immer mit. */
+  const isRelevant = (e: CalendarEvent) =>
+    e.impact === "high" && (wanted.size === 0 || wanted.has(e.currency) || e.currency === "ALL");
+
   // High-Impact-News: alle Termine eines Zeitpunkts in einer Nachricht
   if (prefs.news_enabled) {
-    const wanted = new Set(input.currencies.map((c) => c.toUpperCase()));
     const soon = input.events.filter((e) => {
       const diff = Date.parse(e.time) - now.getTime();
-      return (
-        e.impact === "high" &&
-        (wanted.size === 0 || wanted.has(e.currency) || e.currency === "ALL") &&
-        diff > 0 &&
-        diff <= prefs.news_minutes * 60_000
-      );
+      return isRelevant(e) && diff > 0 && diff <= prefs.news_minutes * 60_000;
     });
     const byTime = new Map<string, CalendarEvent[]>();
     soon.forEach((e) => byTime.set(e.time, [...(byTime.get(e.time) ?? []), e]));
@@ -122,10 +121,19 @@ export function planNotifications(input: PlannerInput): PlannedMessage[] {
   const workdayOk = !prefs.weekdays_only || isWorkday;
 
   if (prefs.plan_enabled && workdayOk && !input.plan.exists && due(prefs.plan_time)) {
+    const todaysNews = input.events
+      .filter((e) => isRelevant(e) && berlinDay(e.time) === today.date)
+      .sort((a, b) => a.time.localeCompare(b.time));
     messages.push({
       kind: "plan",
       ref: today.date,
-      text: "📝 <b>Tagesplan</b>\nFür heute gibt es noch keinen Plan. Bias, Key-Levels und News kurz festhalten, bevor die Session startet.",
+      text: [
+        "📝 <b>Tagesplan</b>",
+        "Für heute gibt es noch keinen Plan. Bias, Key-Levels und News kurz festhalten, bevor die Session startet.",
+        ...(todaysNews.length
+          ? ["", "⚠️ <b>High-Impact heute</b>", ...todaysNews.map((e) => `• ${clock(e.time)} ${escapeHtml(e.currency)} – ${escapeHtml(e.title)}`)]
+          : []),
+      ].join("\n"),
     });
   }
 

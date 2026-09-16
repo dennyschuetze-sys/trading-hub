@@ -70,7 +70,9 @@ export async function runNotifications(admin: AdminClient, { dryRun = false, now
   if (!settings.length) return result;
   result.users = settings.length;
 
-  const { events } = settings.some((s) => s.news_enabled) ? await getCalendar() : { events: [] };
+  // Termine brauchen die News-Vorwarnung und die Tagesübersicht in der Plan-Erinnerung
+  const needsCalendar = settings.some((s) => s.news_enabled || s.plan_enabled);
+  const { events } = needsCalendar ? await getCalendar() : { events: [] };
 
   for (const s of settings) {
     try {

@@ -75,6 +75,32 @@ describe("Tagesplan- und Journal-Erinnerung", () => {
     expect(planNotifications(input({ prefs, now: at("08:40"), plan: { exists: true, reviewed: false } }))).toHaveLength(0);
   });
 
+  it("hängt die heutigen High-Impact-Termine der eigenen Währungen an", () => {
+    const [m] = planNotifications(
+      input({
+        prefs,
+        now: at("08:30"),
+        events: [
+          event(at("14:30"), { title: "Core CPI m/m" }),
+          event(at("10:00"), { id: "eur", currency: "EUR", title: "EZB-Pressekonferenz" }),
+          event(at("11:00"), { id: "jpy", currency: "JPY" }),
+          event(at("12:00"), { id: "med", impact: "medium" }),
+          event(new Date("2026-09-16T14:30:00+02:00"), { id: "morgen", title: "Retail Sales" }),
+        ],
+      }),
+    );
+    expect(m.text).toContain("High-Impact heute");
+    expect(m.text).toContain("10:00 EUR – EZB-Pressekonferenz");
+    expect(m.text.indexOf("EZB")).toBeLessThan(m.text.indexOf("Core CPI"));
+    expect(m.text).not.toContain("JPY");
+    expect(m.text).not.toContain("Retail Sales");
+  });
+
+  it("lässt die Übersicht weg, wenn heute nichts ansteht", () => {
+    const [m] = planNotifications(input({ prefs, now: at("08:30"), events: [event(at("11:00"), { currency: "JPY" })] }));
+    expect(m.text).not.toContain("High-Impact heute");
+  });
+
   it("überspringt Wochenenden, wenn gewünscht", () => {
     const saturday = new Date("2026-09-19T08:35:00+02:00");
     expect(planNotifications(input({ prefs, now: saturday }))).toHaveLength(0);
