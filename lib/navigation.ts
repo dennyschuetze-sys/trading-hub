@@ -3,6 +3,7 @@ import {
   BookOpen,
   CalendarCheck,
   FlaskConical,
+  Images,
   LayoutDashboard,
   Newspaper,
   NotebookPen,
@@ -39,6 +40,7 @@ export const navGroups: NavGroup[] = [
     title: "Wissen & Entwicklung",
     items: [
       { href: "/strategies", label: "Strategien & Wissen", icon: BookOpen, phase: 4 },
+      { href: "/screenshots", label: "Screenshots", icon: Images, phase: 4 },
       { href: "/risk", label: "Risiko-Tools", icon: ShieldAlert, phase: 8 },
       { href: "/goals", label: "Ziele & Reviews", icon: Target, phase: 9 },
       { href: "/backtesting", label: "Backtesting", icon: FlaskConical, phase: 10 },

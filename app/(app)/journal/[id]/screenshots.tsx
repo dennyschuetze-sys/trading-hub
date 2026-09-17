@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ZoomableImage } from "@/components/zoomable-image";
 import { SCREENSHOT_TYPES, checkScreenshots, uploadScreenshots } from "@/lib/screenshot-upload";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -136,7 +137,7 @@ export function Screenshots({
                 size="icon"
                 disabled={deleting}
                 aria-label="Screenshot löschen"
-                className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 max-sm:opacity-100"
+                className="absolute top-2 right-2 opacity-80 shadow-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                 onClick={() => setConfirmDelete(shot)}
               >
                 <Trash2 className="size-4" />
@@ -182,10 +183,7 @@ export function Screenshots({
       <Dialog open={preview != null} onOpenChange={(open) => !open && setPreview(null)}>
         <DialogContent className="max-w-[95vw] p-2 sm:max-w-[90vw]">
           <DialogTitle className="sr-only">Screenshot</DialogTitle>
-          {preview && (
-            // eslint-disable-next-line @next/next/no-img-element -- signierte Supabase-URLs
-            <img src={preview.url} alt="Trade-Screenshot" className="max-h-[85vh] w-full rounded object-contain" />
-          )}
+          {preview && <ZoomableImage key={preview.id} src={preview.url} alt="Trade-Screenshot" className="max-h-[85vh] rounded" />}
         </DialogContent>
       </Dialog>
     </div>

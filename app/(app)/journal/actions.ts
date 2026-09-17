@@ -251,4 +251,5 @@ export async function deleteScreenshot(screenshotId: string, tradeId: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath(`/journal/${tradeId}`);
+  revalidatePath("/screenshots");
 }
