@@ -104,7 +104,7 @@ describe("calculatePositionSize", () => {
     expect(r.size).toBe(0.64);
   });
 
-  it("Gold-CFD: 5 $ Stop, 500 $ Risiko → 1 Lot", () => {
+  it("Gold-CFD: 5 $ Stop = 50 Pips, 500 $ Risiko → 1 Lot", () => {
     const r = ok(
       calculatePositionSize({
         instrument: resolveInstrument("XAUUSD")!,
@@ -115,7 +115,10 @@ describe("calculatePositionSize", () => {
         fx: null,
       }),
     );
-    expect(r.unit).toBe("Punkte");
+    // 1 Pip = 0,1 $ × 100 oz = 10 $ je Lot → 50 Pips = 500 $
+    expect(r.unit).toBe("Pips");
+    expect(r.distanceUnits).toBe(50);
+    expect(r.unitValue).toBeCloseTo(10);
     expect(r.size).toBe(1);
   });
 

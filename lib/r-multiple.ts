@@ -1,3 +1,4 @@
+import { hasPips, resolveInstrument } from "@/lib/position-size";
 import { formatNumber } from "@/lib/trading";
 
 type PriceTrade = {
@@ -37,22 +38,15 @@ type StopTrade = { direction: string; entry_price: number | null; stop_loss: num
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-const CURRENCIES = new Set(
-  "USD EUR GBP JPY CHF AUD NZD CAD SEK NOK DKK SGD HKD ZAR MXN TRY PLN CNH HUF CZK".split(" "),
-);
-
 /**
  * Größe eines Pips für Forex und Metalle (z. B. EURUSD 0.0001, USDJPY 0.01, XAUUSD 0.1).
  * Null bei Indizes, Futures und Unbekanntem – dort wird in Punkten (Kursabstand) gerechnet.
+ * Kommt aus der Instrumententabelle in `position-size`, damit Rechner und Journal
+ * dieselben Pips benutzen und Broker-Schreibweisen (`XAUUSDm`, `NQZ6`) gleich erkannt werden.
  */
 export function pipSize(symbol: string): number | null {
-  const s = symbol.toUpperCase().replace(/[^A-Z]/g, "");
-  if (s.startsWith("XAU")) return 0.1;
-  if (s.startsWith("XAG")) return 0.01;
-  const base = s.slice(0, 3);
-  const quote = s.slice(3, 6);
-  if (!CURRENCIES.has(base) || !CURRENCIES.has(quote)) return null;
-  return quote === "JPY" ? 0.01 : 0.0001;
+  const ins = resolveInstrument(symbol);
+  return ins && hasPips(ins) ? ins.pipSize : null;
 }
 
 /** SL-Größe in Pips (Forex/Metalle) oder Punkten (sonst). */

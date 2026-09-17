@@ -10,14 +10,23 @@ import {
   plannedRewardRisk,
   stopSize,
 } from "./r-multiple";
+import { hasPips, resolveInstrument } from "./position-size";
 
 describe("pipSize / stopSize", () => {
   it("erkennt Forex, JPY-Paare und Metalle", () => {
     expect(pipSize("EURUSD")).toBe(0.0001);
     expect(pipSize("usdjpy.r")).toBe(0.01);
     expect(pipSize("XAUUSD")).toBe(0.1);
+    expect(pipSize("XAGUSD")).toBe(0.01);
     expect(pipSize("NQ")).toBeNull();
     expect(pipSize("US30")).toBeNull();
+  });
+
+  it("nutzt dieselben Pips wie der Positionsrechner, auch bei Broker-Schreibweisen", () => {
+    for (const symbol of ["XAUUSDm", "eurusd.pro", "GBPJPY", "NQZ6", "GER40"]) {
+      const ins = resolveInstrument(symbol)!;
+      expect(pipSize(symbol)).toBe(hasPips(ins) ? ins.pipSize : null);
+    }
   });
 
   it("Pips bei Forex, Punkte bei Indizes", () => {

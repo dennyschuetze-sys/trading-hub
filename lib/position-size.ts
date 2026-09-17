@@ -11,7 +11,7 @@ export type Instrument = {
   quote: string;
   /** Forex/CFD: Einheiten pro 1 Lot */
   contractSize: number;
-  /** Forex: Größe eines Pips im Preis */
+  /** Forex und Metalle: Größe eines Pips im Preis (1 = wird in Punkten gerechnet) */
   pipSize: number;
   /** Futures: kleinste Preisbewegung und ihr Wert pro Kontrakt */
   tickSize: number;
@@ -37,14 +37,22 @@ const forex = (symbol: string, group = "Forex"): Instrument => {
   };
 };
 
-const cfd = (symbol: string, label: string, quote: string, contractSize: number, aliases: string[] = [], group = "Indizes & Rohstoffe (CFD)"): Instrument => ({
+const cfd = (
+  symbol: string,
+  label: string,
+  quote: string,
+  contractSize: number,
+  aliases: string[] = [],
+  group = "Indizes & Rohstoffe (CFD)",
+  pipSize = 1,
+): Instrument => ({
   symbol,
   label,
   kind: "cfd",
   group,
   quote,
   contractSize,
-  pipSize: 1,
+  pipSize,
   tickSize: 0,
   tickValue: 0,
   aliases,
@@ -68,8 +76,8 @@ export const INSTRUMENTS: Instrument[] = [
   ...["EURGBP", "EURJPY", "GBPJPY", "EURCHF", "EURAUD", "EURCAD", "GBPCHF", "AUDJPY", "CADJPY", "CHFJPY", "AUDCAD", "AUDNZD", "NZDJPY", "GBPAUD", "GBPCAD"].map(
     (s) => forex(s, "Forex Crosses"),
   ),
-  cfd("XAUUSD", "Gold", "USD", 100, ["GOLD"], "Metalle (CFD)"),
-  cfd("XAGUSD", "Silber", "USD", 5000, ["SILVER"], "Metalle (CFD)"),
+  cfd("XAUUSD", "Gold", "USD", 100, ["GOLD"], "Metalle (CFD)", 0.1),
+  cfd("XAGUSD", "Silber", "USD", 5000, ["SILVER"], "Metalle (CFD)", 0.01),
   cfd("US30", "Dow Jones", "USD", 1, ["DJ30", "WS30", "DOW", "USA30"]),
   cfd("US100", "Nasdaq 100", "USD", 1, ["NAS100", "USTEC", "NDX", "USA100"]),
   cfd("US500", "S&P 500", "USD", 1, ["SPX500", "SP500", "SPX", "USA500"]),
@@ -102,6 +110,13 @@ export const INSTRUMENTS: Instrument[] = [
   future("FDXM", "Mini-DAX-Future", 1, 5, "EUR", "FDXS"),
   future("FDXS", "Micro-DAX-Future", 1, 1, "EUR"),
 ];
+
+/**
+ * Instrumente, deren Kursabstände in Pips gemessen werden: Forex und Metalle.
+ * Indizes, Öl und Krypto laufen in Punkten (pipSize 1), Futures in Ticks.
+ * Einzige Quelle für diese Unterscheidung – auch Journal und Auswertung fragen hier.
+ */
+export const hasPips = (ins: Instrument) => ins.kind !== "future" && ins.pipSize < 1;
 
 const FOREX_CURRENCIES = new Set(["USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "NZD", "SEK", "NOK", "DKK", "PLN", "HUF", "CZK", "ZAR", "MXN", "SGD", "HKD", "TRY", "CNH"]);
 
@@ -238,7 +253,7 @@ export function calculatePositionSize(input: SizeInput): SizeResult | SizeError 
   } else {
     if (!(ins.contractSize > 0)) return { error: "Die Kontraktgröße fehlt." };
     lossPerUnit = stopDistance * ins.contractSize * rate;
-    if (ins.kind === "forex") {
+    if (hasPips(ins)) {
       distanceUnits = stopDistance / ins.pipSize;
       unit = "Pips";
       unitValue = ins.pipSize * ins.contractSize * rate;
@@ -264,12 +279,12 @@ export function calculatePositionSize(input: SizeInput): SizeResult | SizeError 
   };
 }
 
-/** Eingabeeinheit für den Stop-Abstand: Pips bei Forex, sonst Punkte (= Preisdifferenz). */
-export const distanceInputUnit = (ins: Instrument) => (ins.kind === "forex" ? "Pips" : "Punkte");
+/** Eingabeeinheit für den Stop-Abstand: Pips bei Forex und Metallen, sonst Punkte (= Preisdifferenz). */
+export const distanceInputUnit = (ins: Instrument) => (hasPips(ins) ? "Pips" : "Punkte");
 
 /** Umrechnung des eingegebenen Stop-Abstands in eine Preisdifferenz. */
 export function distanceToPrice(ins: Instrument, value: number) {
-  return ins.kind === "forex" ? value * ins.pipSize : value;
+  return hasPips(ins) ? value * ins.pipSize : value;
 }
 
 /** Zielkurs für ein R-Vielfaches (Richtung ergibt sich aus Einstieg und Stop). */
