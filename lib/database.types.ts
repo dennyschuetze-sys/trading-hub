@@ -278,6 +278,36 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["calendar_history"]["Insert"]>;
         Relationships: [];
       };
+      cot_reports: {
+        Row: {
+          comm_long: number;
+          comm_short: number;
+          contract_code: string;
+          created_at: string;
+          market_name: string;
+          noncomm_long: number;
+          noncomm_short: number;
+          nonrept_long: number;
+          nonrept_short: number;
+          open_interest: number;
+          report_date: string;
+        };
+        Insert: {
+          comm_long: number;
+          comm_short: number;
+          contract_code: string;
+          created_at?: string;
+          market_name: string;
+          noncomm_long: number;
+          noncomm_short: number;
+          nonrept_long: number;
+          nonrept_short: number;
+          open_interest: number;
+          report_date: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["cot_reports"]["Insert"]>;
+        Relationships: [];
+      };
       daily_plans: {
         Row: {
           created_at: string;

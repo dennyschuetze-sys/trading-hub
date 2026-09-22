@@ -31,6 +31,12 @@ export function shortDate(isoOrDate: string) {
   return new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", timeZone: TIME_ZONE }).format(date);
 }
 
+/** Achsenbeschriftung über mehrere Jahre: „Sep 24“ – ohne Jahr wären Punkte nicht unterscheidbar. */
+export function monthYear(isoOrDate: string) {
+  const date = isoOrDate.length === 10 ? new Date(`${isoOrDate}T12:00:00Z`) : new Date(isoOrDate);
+  return new Intl.DateTimeFormat("de-DE", { month: "short", year: "2-digit", timeZone: TIME_ZONE }).format(date);
+}
+
 export function longDate(isoOrDate: string) {
   const date = isoOrDate.length === 10 ? new Date(`${isoOrDate}T12:00:00Z`) : new Date(isoOrDate);
   return new Intl.DateTimeFormat("de-DE", {

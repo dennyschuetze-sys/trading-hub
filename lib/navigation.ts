@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   FlaskConical,
   Images,
+  Landmark,
   LayoutDashboard,
   Newspaper,
   NotebookPen,
@@ -25,6 +26,7 @@ export const navGroups: NavGroup[] = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, phase: 3 },
       { href: "/plan", label: "Tagesplan", icon: CalendarCheck, phase: 5 },
       { href: "/news", label: "News & Kalender", icon: Newspaper, phase: 6 },
+      { href: "/cot", label: "COT-Daten", icon: Landmark, phase: 12 },
     ],
   },
   {
