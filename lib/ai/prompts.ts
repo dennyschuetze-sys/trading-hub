@@ -138,12 +138,16 @@ export type JournalPromptInput = {
   plans: JournalPlanInput[];
   stats: { trades: number; winRate: number | null; avgR: number | null; pnlByCurrency: [string, number][]; discipline: number | null };
   review: { went_well: string | null; to_improve: string | null; lessons: string | null } | null;
+  /** Trades im Zeitraum insgesamt – kann über `trades.length` liegen, wenn die Abfrage gedeckelt hat. */
+  totalTrades?: number;
 };
 
 export const JOURNAL_MAX_TRADES = 200;
 
-export function buildJournalPrompt({ periodLabel, trades, plans, stats, review }: JournalPromptInput): string {
+export function buildJournalPrompt({ periodLabel, trades, plans, stats, review, totalTrades }: JournalPromptInput): string {
   const list = [...trades].sort((a, b) => a.entry_time.localeCompare(b.entry_time)).slice(0, JOURNAL_MAX_TRADES);
+  // Die Abfrage kann schon vor uns gedeckelt haben – dann steht die echte Zahl in totalTrades
+  const total = Math.max(totalTrades ?? 0, trades.length);
 
   const tradeLines = list.map((t) => {
     const fields = [
@@ -194,7 +198,7 @@ export function buildJournalPrompt({ periodLabel, trades, plans, stats, review }
     `Kennzahlen: ${stats.trades} Trades, Winrate ${pct(stats.winRate)}, Ø ${stats.avgR ?? "–"} R, ` +
       `Netto ${stats.pnlByCurrency.length ? stats.pnlByCurrency.map(([c, v]) => `${v} ${c}`).join(", ") : "–"}, ` +
       `Disziplin-Score ${stats.discipline ?? "–"}/100.`,
-    trades.length > list.length ? `Hinweis: nur die ersten ${list.length} von ${trades.length} Trades enthalten.` : "",
+    total > list.length ? `Hinweis: nur die ersten ${list.length} von ${total} Trades enthalten, die Kennzahlen oben umfassen alle ${total}.` : "",
     "",
     "<trades>",
     tradeLines.length ? tradeLines.join("\n") : "Keine Trades.",

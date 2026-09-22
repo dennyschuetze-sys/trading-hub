@@ -39,6 +39,31 @@ export async function fetchStatTrades(
   return all;
 }
 
+/**
+ * Trades, die im Zeitraum geschlossen wurden – unabhängig davon, wann sie eröffnet wurden.
+ * Für die Regelprüfung nötig: Tagesverlust und Verlustserien zählen einen Trade zum Tag
+ * seines Ausstiegs, ein lange gehaltener Trade fällt sonst aus dem Einstiegsfenster heraus.
+ */
+export async function fetchTradesClosedBetween(supabase: Supabase, exitFrom: string, exitTo: string): Promise<StatTrade[]> {
+  const all: StatTrade[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("trades")
+      .select(STAT_COLUMNS)
+      .eq("is_backtest", false)
+      .eq("status", "closed")
+      .gte("exit_time", exitFrom)
+      .lte("exit_time", exitTo)
+      .order("entry_time", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    all.push(...(data as StatTrade[]));
+    if (data.length < PAGE) break;
+  }
+  return all;
+}
+
 const DETAIL_COLUMNS = `${STAT_COLUMNS}, entry_price, exit_price, stop_loss, take_profit, best_price, worst_price, pnl, commission, swap, entry_timeframe, htf_bias, market_context, moved_to_breakeven, partial_close`;
 
 /** Alle Live-Trades mit Kursen und Setup-Kontext für die Statistikseite – seitenweise wie fetchStatTrades. */

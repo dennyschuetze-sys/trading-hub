@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AiError, generateStructured } from "@/lib/ai/claude";
 import { NEWS_SYSTEM, buildNewsPrompt } from "@/lib/ai/prompts";
-import { MAX_GENERATIONS, loadReport, saveReport } from "@/lib/ai/reports";
+import { MAX_GENERATIONS, claimGeneration, releaseGeneration, saveReport, usedGenerations } from "@/lib/ai/reports";
 import { NewsBriefingSchema } from "@/lib/ai/schemas";
 import { todayBerlin } from "@/lib/daily-plan";
 import { getCalendar, getNews, getNewsSettings } from "@/lib/feeds";
@@ -17,8 +17,9 @@ export async function generateNewsBriefing(): Promise<{ error?: string }> {
   if (!auth.user) redirect("/login");
 
   const today = todayBerlin();
-  const { generations } = await loadReport(supabase, "news_daily", today, NewsBriefingSchema);
-  if (generations >= MAX_GENERATIONS) return { error: `Heute wurde das Briefing schon ${MAX_GENERATIONS}-mal erstellt.` };
+  const limitReached = `Heute wurde das Briefing schon ${MAX_GENERATIONS}-mal erstellt.`;
+  // Frühe, freundliche Absage – verbindlich ist erst die Buchung weiter unten
+  if ((await usedGenerations(supabase, "news_daily", today)) >= MAX_GENERATIONS) return { error: limitReached };
 
   const settings = await getNewsSettings(supabase);
   const [calendar, news, { data: symbols }] = await Promise.all([
@@ -28,8 +29,13 @@ export async function generateNewsBriefing(): Promise<{ error?: string }> {
   ]);
   if (!news.items.length && !calendar.events.length) return { error: "Gerade sind weder News noch Termine abrufbar." };
 
+  // Erst unmittelbar vor dem teuren Aufruf buchen, damit abgebrochene Versuche nichts kosten
+  const claimed = await claimGeneration(supabase, "news_daily", today);
+  if (claimed === null) return { error: limitReached };
+
+  let result;
   try {
-    const result = await generateStructured({
+    result = await generateStructured({
       schema: NewsBriefingSchema,
       system: NEWS_SYSTEM,
       prompt: buildNewsPrompt({
@@ -41,11 +47,20 @@ export async function generateNewsBriefing(): Promise<{ error?: string }> {
       }),
       effort: "medium",
     });
-    await saveReport(supabase, auth.user.id, "news_daily", today, result, generations);
   } catch (e) {
+    // Der Aufruf kam nicht durch – die Buchung zurückgeben
+    await releaseGeneration(supabase, "news_daily", today);
     if (e instanceof AiError) return { error: e.message };
     console.error("KI-Briefing fehlgeschlagen", e);
     return { error: "Das Briefing konnte nicht erstellt werden." };
+  }
+
+  try {
+    // Ab hier ist das Kontingent verbraucht, die Tokens sind geflossen
+    await saveReport(supabase, auth.user.id, "news_daily", today, result, claimed);
+  } catch (e) {
+    console.error("KI-Briefing nicht gespeichert", e);
+    return { error: "Das Briefing wurde erstellt, konnte aber nicht gespeichert werden." };
   }
 
   revalidatePath("/news");

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AiError, generateStructured } from "@/lib/ai/claude";
 import { JOURNAL_SYSTEM, buildJournalPrompt } from "@/lib/ai/prompts";
-import { MAX_GENERATIONS, loadReport, saveReport } from "@/lib/ai/reports";
+import { MAX_GENERATIONS, claimGeneration, releaseGeneration, saveReport, usedGenerations } from "@/lib/ai/reports";
 import { JournalAnalysisSchema } from "@/lib/ai/schemas";
 import { isValidDate, todayBerlin } from "@/lib/daily-plan";
 import { summarizePeriod } from "@/lib/goals";
@@ -15,6 +15,9 @@ import { createClient } from "@/lib/supabase/server";
 import { maxAdverseR, maxFavorableR } from "@/lib/r-multiple";
 import { revengeTrades, tradeNumberOfDay } from "@/lib/trade-analysis";
 import { HTF_BIASES, MARKET_CONTEXTS, SESSIONS, dayBoundary, labelFor } from "@/lib/trading";
+
+/** So viele Trades werden höchstens geladen; in den Prompt gehen davon nur JOURNAL_MAX_TRADES. */
+const JOURNAL_QUERY_LIMIT = 500;
 
 /** KI-Analyse des Journals für eine Woche oder einen Monat. */
 export async function generateJournalAnalysis(type: PeriodType, requestedStart: string): Promise<{ error?: string }> {
@@ -29,10 +32,13 @@ export async function generateJournalAnalysis(type: PeriodType, requestedStart: 
   if (start > today) return { error: "Dieser Zeitraum liegt in der Zukunft." };
 
   const kind = type === "week" ? "journal_week" : "journal_month";
-  const { generations } = await loadReport(supabase, kind, start, JournalAnalysisSchema);
-  if (generations >= MAX_GENERATIONS) return { error: `Für diesen Zeitraum wurde die Analyse schon ${MAX_GENERATIONS}-mal erstellt.` };
+  const limitReached = `Für diesen Zeitraum wurde die Analyse schon ${MAX_GENERATIONS}-mal erstellt.`;
+  // Frühe, freundliche Absage – verbindlich ist erst die Buchung weiter unten
+  if ((await usedGenerations(supabase, kind, start)) >= MAX_GENERATIONS) return { error: limitReached };
 
-  const [{ data: discipline }, { data: trades, error: tradesError }, { data: plans }, { data: review }, { data: accounts }, { data: strategies }] = await Promise.all([
+  // Die Trade-Abfrage ist gedeckelt; die echte Anzahl kommt separat, damit der Prompt sie
+  // nennen kann und die Analyse nicht im Widerspruch zu den Kennzahlen steht.
+  const [{ data: discipline }, { data: trades, error: tradesError }, { count: totalTrades }, { data: plans }, { data: review }, { data: accounts }, { data: strategies }] = await Promise.all([
     loadDisciplineData(supabase),
     supabase
       .from("trades")
@@ -41,7 +47,13 @@ export async function generateJournalAnalysis(type: PeriodType, requestedStart: 
       .gte("entry_time", dayBoundary(start, "start"))
       .lte("entry_time", dayBoundary(end, "end"))
       .order("entry_time")
-      .limit(500),
+      .limit(JOURNAL_QUERY_LIMIT),
+    supabase
+      .from("trades")
+      .select("id", { count: "exact", head: true })
+      .eq("is_backtest", false)
+      .gte("entry_time", dayBoundary(start, "start"))
+      .lte("entry_time", dayBoundary(end, "end")),
     supabase
       .from("daily_plans")
       .select("plan_date, followed_plan, discipline, went_well, to_improve, lesson")
@@ -68,8 +80,13 @@ export async function generateJournalAnalysis(type: PeriodType, requestedStart: 
   const tradeNumbers = tradeNumberOfDay(timed);
   const revenge = revengeTrades(timed);
 
+  // Erst unmittelbar vor dem teuren Aufruf buchen, damit abgebrochene Versuche nichts kosten
+  const claimed = await claimGeneration(supabase, kind, start);
+  if (claimed === null) return { error: limitReached };
+
+  let result;
   try {
-    const result = await generateStructured({
+    result = await generateStructured({
       schema: JournalAnalysisSchema,
       system: JOURNAL_SYSTEM,
       prompt: buildJournalPrompt({
@@ -92,14 +109,24 @@ export async function generateJournalAnalysis(type: PeriodType, requestedStart: 
         plans: plans ?? [],
         stats,
         review,
+        totalTrades: totalTrades ?? undefined,
       }),
       effort: "high",
     });
-    await saveReport(supabase, auth.user.id, kind, start, result, generations);
   } catch (e) {
+    // Der Aufruf kam nicht durch – die Buchung zurückgeben
+    await releaseGeneration(supabase, kind, start);
     if (e instanceof AiError) return { error: e.message };
     console.error("KI-Analyse fehlgeschlagen", e);
     return { error: "Die Analyse konnte nicht erstellt werden." };
+  }
+
+  try {
+    // Ab hier ist das Kontingent verbraucht, die Tokens sind geflossen
+    await saveReport(supabase, auth.user.id, kind, start, result, claimed);
+  } catch (e) {
+    console.error("KI-Analyse nicht gespeichert", e);
+    return { error: "Die Analyse wurde erstellt, konnte aber nicht gespeichert werden." };
   }
 
   revalidatePath("/goals");

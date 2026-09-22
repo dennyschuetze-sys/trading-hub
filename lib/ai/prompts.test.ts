@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CalendarEvent } from "../calendar";
 import type { NewsItem } from "../news";
-import { NEWS_MAX_ITEMS, buildJournalPrompt, buildNewsPrompt, type JournalTradeInput } from "./prompts";
+import { JOURNAL_MAX_TRADES, NEWS_MAX_ITEMS, buildJournalPrompt, buildNewsPrompt, type JournalTradeInput } from "./prompts";
 
 const now = new Date("2026-09-15T07:00:00Z"); // 09:00 Berlin
 
@@ -98,6 +98,34 @@ describe("buildJournalPrompt", () => {
     expect(prompt).not.toContain("2026-09-15:");
     expect(prompt).toContain("<eigenes_review>");
     expect(prompt).not.toMatch(/\n\n\n/);
+  });
+
+  it("nennt beim Kürzen die echte Gesamtzahl, nicht die der gedeckelten Abfrage", () => {
+    // Die Abfrage lädt höchstens 500 Trades, in den Prompt gehen 200 – die Kennzahlen
+    // stammen aber aus dem vollen Bestand. Ohne totalTrades stünde hier „von 500“.
+    const trades = Array.from({ length: 500 }, (_, i) => trade({ entry_time: `2026-09-14T${String(i % 24).padStart(2, "0")}:00:00Z` }));
+    const prompt = buildJournalPrompt({
+      periodLabel: "September 2026",
+      trades,
+      plans: [],
+      stats: { trades: 812, winRate: 0.5, avgR: 0.2, pnlByCurrency: [["USD", 100]], discipline: 70 },
+      review: null,
+      totalTrades: 812,
+    });
+    expect(prompt).toContain(`nur die ersten ${JOURNAL_MAX_TRADES} von 812 Trades`);
+    expect(prompt).not.toContain("von 500 Trades");
+  });
+
+  it("fällt ohne totalTrades auf die gelieferte Anzahl zurück", () => {
+    const trades = Array.from({ length: 250 }, () => trade());
+    const prompt = buildJournalPrompt({
+      periodLabel: "September 2026",
+      trades,
+      plans: [],
+      stats: { trades: 250, winRate: 0, avgR: -1, pnlByCurrency: [], discipline: null },
+      review: null,
+    });
+    expect(prompt).toContain(`nur die ersten ${JOURNAL_MAX_TRADES} von 250 Trades`);
   });
 
   it("kommt ohne Daten aus", () => {

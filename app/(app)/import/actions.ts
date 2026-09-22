@@ -96,8 +96,8 @@ export async function createImportBatch(input: {
 
 /**
  * Speichert einen Teil der Trades; bereits vorhandene (gleiche ID) werden übersprungen.
- * Fehlt bei vorhandenen Trades das Risiko, wird es samt ursprünglichem SL ergänzt –
- * manuell eingetragene Werte bleiben unangetastet.
+ * Bei vorhandenen Trades werden Risiko und Stop Loss nur dort ergänzt, wo das jeweilige
+ * Feld noch leer ist – manuell eingetragene Werte bleiben unangetastet.
  */
 export async function importTradeChunk(input: {
   batchId: string;
@@ -130,23 +130,37 @@ export async function importTradeChunk(input: {
   const skipped = rows.length - imported;
 
   const insertedIds = new Set(data.map((d) => d.external_id));
-  const toComplete = rows.filter((r) => r.risk_amount != null && !insertedIds.has(r.external_id!));
-  let completed = 0;
-  for (let i = 0; i < toComplete.length; i += 25) {
-    const results = await Promise.all(
-      toComplete.slice(i, i + 25).map((r) =>
-        supabase
-          .from("trades")
-          .update({ stop_loss: r.stop_loss, risk_amount: r.risk_amount })
-          .eq("account_id", batch.account_id)
-          .eq("source", batch.source)
-          .eq("external_id", r.external_id!)
-          .is("risk_amount", null)
-          .select("id"),
-      ),
-    );
-    completed += results.reduce((n, res) => n + (res.data?.length ?? 0), 0);
-  }
+  const existing = rows.filter((r) => !insertedIds.has(r.external_id!));
+
+  /**
+   * Bestehende Trades nur dort ergänzen, wo das jeweilige Feld noch leer ist.
+   * Jede Spalte braucht ihre eigene Bedingung – sonst würde ein erneuter Import
+   * einen von Hand eingetragenen Stop Loss überschreiben, nur weil das Risiko fehlt.
+   */
+  const fill = async (column: "risk_amount" | "stop_loss") => {
+    const pending = existing.filter((r) => r[column] != null);
+    let filled = 0;
+    for (let i = 0; i < pending.length; i += 25) {
+      const results = await Promise.all(
+        pending.slice(i, i + 25).map((r) =>
+          supabase
+            .from("trades")
+            .update(column === "risk_amount" ? { risk_amount: r.risk_amount } : { stop_loss: r.stop_loss })
+            .eq("account_id", batch.account_id)
+            .eq("source", batch.source)
+            .eq("external_id", r.external_id!)
+            .is(column, null)
+            .select("id"),
+        ),
+      );
+      filled += results.reduce((n, res) => n + (res.data?.length ?? 0), 0);
+    }
+    return filled;
+  };
+
+  // „completed“ zählt weiterhin die ergänzten Risikobeträge – danach der Stop Loss
+  const completed = await fill("risk_amount");
+  await fill("stop_loss");
   // Die Chunks laufen nacheinander (siehe import-wizard), daher reicht Lesen + Schreiben
   const { error: countError } = await supabase
     .from("import_batches")

@@ -130,6 +130,24 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["ai_reports"]["Insert"]>;
         Relationships: [];
       };
+      ai_usage: {
+        Row: {
+          generations: number;
+          kind: string;
+          period_key: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          generations?: number;
+          kind: string;
+          period_key: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ai_usage"]["Insert"]>;
+        Relationships: [];
+      };
       account_costs: {
         Row: {
           account_id: string | null;
@@ -787,7 +805,16 @@ export type Database = {
       };
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      claim_ai_generation: {
+        Args: { p_kind: string; p_period_key: string; p_max: number };
+        Returns: number | null;
+      };
+      release_ai_generation: {
+        Args: { p_kind: string; p_period_key: string };
+        Returns: undefined;
+      };
+    };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
   };

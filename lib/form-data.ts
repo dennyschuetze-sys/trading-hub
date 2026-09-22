@@ -75,4 +75,11 @@ export function list(formData: FormData, key: string): string[] {
 
 export class FormError extends Error {}
 
-export type FormState = { error?: string; success?: string; /** gespeicherter Datensatz, wenn die Seite danach selbst weiterleitet */ id?: string };
+export type FormState = {
+  error?: string;
+  success?: string;
+  /** Gespeichert, aber ein Nebenschritt ist fehlgeschlagen – kein Grund, erneut abzusenden */
+  warning?: string;
+  /** gespeicherter Datensatz, wenn die Seite danach selbst weiterleitet */
+  id?: string;
+};

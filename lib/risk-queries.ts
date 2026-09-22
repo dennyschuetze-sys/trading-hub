@@ -2,7 +2,7 @@ import "server-only";
 import type { AccountRiskRow } from "@/components/risk/risk-status-card";
 import type { CalendarEvent } from "@/lib/calendar";
 import { evaluateAccount } from "@/lib/prop-rules";
-import { fetchStatTrades } from "@/lib/queries";
+import { fetchStatTrades, fetchTradesClosedBetween } from "@/lib/queries";
 import {
   evaluateToday,
   findViolations,
@@ -109,6 +109,10 @@ const shift = (iso: string, ms: number) => new Date(Date.parse(iso) + ms).toISOS
  * Regelverstöße für Trades mit Einstieg im Zeitraum. Holt dafür etwas Vorlauf (über Nacht
  * gehaltene Trades zählen zum Tag ihres Ausstiegs) und die Termine rund um den Zeitraum.
  * Ohne Zeitraum werden alle Trades geprüft.
+ *
+ * Zusätzlich werden alle im Zeitraum geschlossenen Trades geladen, auch wenn ihr Einstieg
+ * weit davor liegt: Tagesverlust und Verlustserie zählen sie zum Ausstiegstag, und ein
+ * fester Vorlauf würde einen lange gehaltenen Trade übersehen.
  */
 export async function loadViolations(
   supabase: Supabase,
@@ -120,12 +124,24 @@ export async function loadViolations(
     entryFrom: range.entryFrom ? shift(range.entryFrom, -4 * DAY) : undefined,
     entryTo: range.entryTo ? shift(range.entryTo, DAY) : undefined,
   };
-  const [trades, { data: accounts }, events] = await Promise.all([
+  const [entered, closedInRange, { data: accounts }, events] = await Promise.all([
     preloaded?.trades ?? fetchStatTrades(supabase, undefined, padded),
+    // Nur nötig, wenn überhaupt eingegrenzt wird und die Trades nicht schon vollständig vorliegen
+    preloaded?.trades || !padded.entryFrom
+      ? Promise.resolve([])
+      : fetchTradesClosedBetween(supabase, padded.entryFrom, padded.entryTo ?? new Date().toISOString()),
     supabase.from("accounts").select("id, starting_balance, currency"),
     rules.newsBlockBeforeMin || rules.newsBlockAfterMin
       ? getEventHistory(supabase, padded.entryFrom && shift(padded.entryFrom, -DAY), padded.entryTo && shift(padded.entryTo, DAY))
       : Promise.resolve([]),
   ]);
+
+  const byId = new Map(entered.map((t) => [t.id, t]));
+  for (const t of closedInRange) if (!byId.has(t.id)) byId.set(t.id, t);
+  const trades = [...byId.values()];
+
+  // `trades` geht auch an die Aufrufer zurück – in der Einstiegsreihenfolge wie bisher
+  trades.sort((a, b) => a.entry_time.localeCompare(b.entry_time) || a.id.localeCompare(b.id));
+
   return { violations: findViolations(trades, accounts ?? [], rules, events), rules, trades };
 }

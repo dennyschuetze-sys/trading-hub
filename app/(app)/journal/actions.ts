@@ -148,6 +148,9 @@ export async function saveTrade(
     throw e;
   }
 
+  // Eingaben vollständig prüfen, bevor irgendetwas gespeichert wird
+  if (list(formData, "checklist_item").some((id) => !UUID.test(id))) return { error: "Ungültige Checkliste." };
+
   const query = tradeId
     ? supabase.from("trades").update(values).eq("id", tradeId).select("id").single()
     : supabase.from("trades").insert(values).select("id").single();
@@ -155,11 +158,18 @@ export async function saveTrade(
 
   if (error) return { error: `Speichern fehlgeschlagen: ${error.message}` };
 
-  if (list(formData, "checklist_item").some((id) => !UUID.test(id))) return { error: "Ungültige Checkliste." };
+  /**
+   * Ab hier ist der Trade gespeichert. Ein Fehler in der Checkliste darf deshalb keine
+   * Fehlermeldung zurückgeben, die zum erneuten Absenden einlädt – das legte einen zweiten
+   * Datensatz an. Stattdessen wird wie beim Screenshot-Upload weitergeleitet und gewarnt.
+   */
+  let warning: string | undefined;
   try {
     await syncChecklist(supabase, data.id, formData);
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Checkliste konnte nicht gespeichert werden." };
+    console.error("Checkliste nicht gespeichert", e);
+    const reason = e instanceof Error ? e.message : "Unbekannter Fehler";
+    warning = `Trade gespeichert, aber die Checkliste nicht: ${reason}. Du kannst sie auf der Detailseite nachtragen.`;
   }
 
   revalidatePath("/journal");
@@ -167,6 +177,7 @@ export async function saveTrade(
   revalidatePath("/strategies");
   revalidatePath("/backtesting", "layout");
   // Vorgemerkte Screenshots lädt das Formular hoch und leitet danach selbst weiter
+  if (warning) return { warning, id: data.id };
   if (formData.get("after_save") === "upload") return { success: "Trade gespeichert", id: data.id };
   redirect(`/journal/${data.id}`);
 }

@@ -235,12 +235,18 @@ export function TradeForm({
     if (files.length) formData.set("after_save", "upload");
   });
 
-  // Gespeichert mit vorgemerkten Screenshots: jetzt hochladen, dann zur Detailseite
+  // Gespeichert: ggf. vorgemerkte Screenshots hochladen, dann zur Detailseite
   useEffect(() => {
     const tradeId = state.id;
     if (!tradeId) return;
     let cancelled = false;
     (async () => {
+      // Der Trade ist gespeichert, ein Nebenschritt lief schief – melden, nicht blockieren
+      if (state.warning) toast.error(state.warning);
+      if (!files.length) {
+        if (!cancelled) router.push(`/journal/${tradeId}`);
+        return;
+      }
       setUploading(true);
       try {
         await uploadScreenshots(createClient(), { userId, tradeId, files });
