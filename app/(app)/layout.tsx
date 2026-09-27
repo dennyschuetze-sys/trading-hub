@@ -28,7 +28,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           Zum Inhalt springen
         </a>
         <DesktopSidebar>
-          <SidebarNav />
+          <SidebarNav collapsible />
         </DesktopSidebar>
 
         <div className="flex min-w-0 flex-1 flex-col">

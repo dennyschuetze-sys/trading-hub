@@ -37,26 +37,27 @@ export function SidebarProvider({ initialCollapsed, children }: { initialCollaps
   return <SidebarContext.Provider value={{ collapsed, toggle }}>{children}</SidebarContext.Provider>;
 }
 
+export const useSidebar = () => useContext(SidebarContext);
+
 export function DesktopSidebar({ children }: { children: React.ReactNode }) {
   const { collapsed } = useContext(SidebarContext);
   return (
     <aside
       id="sidebar"
-      inert={collapsed}
       className={cn(
-        "sticky top-0 hidden h-screen shrink-0 overflow-hidden bg-sidebar transition-[width] duration-200 ease-out motion-reduce:transition-none lg:block",
-        collapsed ? "w-0" : "w-64 border-r",
+        "sticky top-0 hidden h-screen shrink-0 overflow-hidden border-r bg-sidebar transition-[width] duration-200 ease-out motion-reduce:transition-none lg:block",
+        collapsed ? "w-16" : "w-64",
       )}
     >
-      {/* feste Breite, damit der Inhalt beim Einklappen nicht umbricht */}
-      <div className="h-full w-64 p-4">{children}</div>
+      {/* Eingeklappt bleibt eine Symbolleiste stehen; Beschriftungen blendet SidebarNav aus */}
+      <div className={cn("h-full", collapsed ? "w-full px-3 py-4" : "w-64 p-4")}>{children}</div>
     </aside>
   );
 }
 
 export function SidebarToggle() {
   const { collapsed, toggle } = useContext(SidebarContext);
-  const label = collapsed ? "Menü einblenden" : "Menü ausblenden";
+  const label = collapsed ? "Menü ausklappen" : "Menü einklappen";
   return (
     <Tooltip>
       <TooltipTrigger asChild>
