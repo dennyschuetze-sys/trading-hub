@@ -83,8 +83,8 @@
   /* Gewinn/Verlust: klassisch Grün und Rot, als Schrift auf Weiß lesbar (≥ 4,5 : 1). Andere Paare – auch für
      Rot-Grün-Schwäche – wählt man in den Einstellungen (lib/pnl-colors.ts) */
   --profit: oklch(0.537 0.145 150);
-  /* Reinrot, für Lesbarkeit auf Weiß minimal abgedunkelt (#ff0000 hätte nur 4,0 : 1) */
-  --loss: #ec0000;
+  /* kräftiges Rot, so satt wie das Grün */
+  --loss: #d40c1a;
   --warning: oklch(0.72 0.16 70);
   /* Akzent für Auswahl, Fokus und Fortschritt – im Standard-Schema Türkis, Farbschemata setzen einen eigenen,
      lesbaren Wert */
@@ -129,8 +129,8 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --profit: oklch(0.75 0.17 150);
-  /* klassisches Reinrot */
-  --loss: #ff0000;
+  /* kräftiges Rot, so satt wie das Grün */
+  --loss: #f53c41;
   --warning: oklch(0.78 0.11 75);
   --brand: oklch(0.74 0.12 180);
   --chart-line: oklch(0.74 0.12 180);

@@ -115,7 +115,7 @@ describe("colorThemeCss", () => {
 });
 
 describe("signalConflict", () => {
-  const greenRed = { profit: "#4bcb71", loss: "#ff0000" };
+  const greenRed = { profit: "#4bcb71", loss: "#f53c41" };
 
   it("warnt, wenn der Akzent wie Gewinn, Verlust oder Warnung aussieht", () => {
     expect(signalConflict("#ff0000", greenRed)?.label).toBe("der Verlustfarbe");
@@ -127,7 +127,7 @@ describe("signalConflict", () => {
     expect(signalConflict("#4c8dff", greenRed)).toBeNull();
     expect(signalConflict("#4c8dff", { profit: "#4c99f8", loss: "#fc6b33" })?.label).toBe("der Gewinnfarbe");
     // graue eigene Gewinnfarbe: kein Farbton, der sich verwechseln ließe
-    expect(signalConflict("#4c8dff", { profit: "#8a8f98", loss: "#ff0000" })).toBeNull();
+    expect(signalConflict("#4c8dff", { profit: "#8a8f98", loss: "#f53c41" })).toBeNull();
   });
 
   it("lässt deutlich andere und graue Töne durch", () => {

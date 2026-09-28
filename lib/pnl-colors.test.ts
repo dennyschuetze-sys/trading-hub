@@ -11,7 +11,7 @@ describe("parsePnlColors / serializePnlColors", () => {
   });
 
   it("fällt bei fehlenden oder manipulierten Werten auf Grün/Rot zurück", () => {
-    expect(parsePnlColors(undefined)).toEqual({ id: "standard", profit: "#4bcb71", loss: "#ff0000" });
+    expect(parsePnlColors(undefined)).toEqual({ id: "standard", profit: "#4bcb71", loss: "#f53c41" });
     expect(parsePnlColors("neon").id).toBe("standard");
     expect(parsePnlColors("custom-00c853-ff1744}body{display:none").id).toBe("standard");
     expect(parsePnlColors("custom-00c853").id).toBe("standard");

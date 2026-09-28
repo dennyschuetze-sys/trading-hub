@@ -12,7 +12,7 @@ type Tones = { profit: Color; loss: Color };
 
 /** `dark` dient zugleich als Vorschau. Die Töne von Standard stehen außerdem handverlesen in globals.css. */
 export const PNL_PRESETS = [
-  { id: "standard", label: "Grün / Rot", dark: { profit: "#4bcb71", loss: "#ff0000" }, light: { profit: "#07843d", loss: "#ec0000" } },
+  { id: "standard", label: "Grün / Rot", dark: { profit: "#4bcb71", loss: "#f53c41" }, light: { profit: "#07843d", loss: "#d40c1a" } },
   // das frühere Paar – bleibt auch bei Rot-Grün-Schwäche unterscheidbar
   { id: "tuerkis", label: "Türkis / Rot", dark: { profit: "#39c3ae", loss: "#db6c62" }, light: { profit: "#008478", loss: "#d01c29" } },
   { id: "blau-orange", label: "Blau / Orange", dark: { profit: "#4c99f8", loss: "#fc6b33" }, light: { profit: "#2876d2", loss: "#d14300" } },
