@@ -27,8 +27,8 @@ import { ReviewForm } from "./review-form";
 
 const STATUS = {
   missing: { label: "Noch kein Plan", icon: CircleDashed, className: "bg-foreground/[0.06] text-muted-foreground" },
-  planned: { label: "Plan steht · Review offen", icon: CircleDashed, className: "bg-warning/12 text-warning" },
-  reviewed: { label: "Plan & Review erledigt", icon: CheckCircle2, className: "bg-profit/12 text-profit" },
+  planned: { label: "Plan steht · Review offen", icon: CircleDashed, className: "bg-warning/20 text-warning" },
+  reviewed: { label: "Plan & Review erledigt", icon: CheckCircle2, className: "bg-profit/20 text-profit" },
 } as const;
 
 /** „Dienstag, 15. September 2026“ */

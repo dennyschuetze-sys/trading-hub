@@ -72,6 +72,6 @@ export const chipClass = (state: "idle" | "selected" | "error") =>
   cn(
     "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-brand/30",
     state === "selected" && "border-brand/50 bg-brand/12 font-medium text-brand",
-    state === "error" && "border-loss/50 bg-loss/12 font-medium text-loss",
+    state === "error" && "border-loss/50 bg-loss/20 font-medium text-loss",
     state === "idle" && "border-foreground/[0.07] bg-foreground/[0.04] text-muted-foreground hover:border-foreground/20 hover:text-foreground",
   );

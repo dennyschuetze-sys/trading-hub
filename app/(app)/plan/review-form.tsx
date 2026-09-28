@@ -39,8 +39,8 @@ export function ReviewForm({ date, plan }: { date: string; plan: DailyPlan | nul
               <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-labelledby="followed_plan-label">
                 {(
                   [
-                    ["true", "Ja", "border-profit bg-profit/15 text-profit"],
-                    ["false", "Nein", "border-loss bg-loss/15 text-loss"],
+                    ["true", "Ja", "border-profit bg-profit/20 text-profit"],
+                    ["false", "Nein", "border-loss bg-loss/20 text-loss"],
                   ] as const
                 ).map(([value, label, activeClass]) => {
                   const active = followedPlan === value;
@@ -69,7 +69,7 @@ export function ReviewForm({ date, plan }: { date: string; plan: DailyPlan | nul
 
         <div className="grid gap-4 md:grid-cols-2">
           <PlanCard className="grid content-start gap-2">
-            <span className="mb-1 flex size-7 items-center justify-center rounded-lg bg-profit/15 text-profit" aria-hidden>
+            <span className="mb-1 flex size-7 items-center justify-center rounded-lg bg-profit/20 text-profit" aria-hidden>
               <Check className="size-3.5" strokeWidth={2.5} />
             </span>
             <PlanLabel htmlFor="went_well">Was lief gut?</PlanLabel>
@@ -84,7 +84,7 @@ export function ReviewForm({ date, plan }: { date: string; plan: DailyPlan | nul
             />
           </PlanCard>
           <PlanCard className="grid content-start gap-2">
-            <span className="mb-1 flex size-7 items-center justify-center rounded-lg bg-loss/15 text-loss" aria-hidden>
+            <span className="mb-1 flex size-7 items-center justify-center rounded-lg bg-loss/20 text-loss" aria-hidden>
               <Plus className="size-3.5" strokeWidth={2.5} />
             </span>
             <PlanLabel htmlFor="to_improve">Was mache ich besser?</PlanLabel>

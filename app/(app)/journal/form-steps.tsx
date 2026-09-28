@@ -51,7 +51,7 @@ export function FormSteps({ steps, percent }: { steps: FormStep[]; percent: numb
             <span
               className={cn(
                 "grid size-5 place-items-center rounded-full text-[0.6875rem] tracking-normal",
-                step.done ? "bg-profit/15 text-profit" : active === i ? "bg-brand text-background" : "ring-1 ring-input",
+                step.done ? "bg-profit/20 text-profit" : active === i ? "bg-brand text-background" : "ring-1 ring-input",
               )}
             >
               {step.done ? <Check className="size-3" aria-label="vollständig" /> : i + 1}

@@ -160,7 +160,7 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
                   <span
                     className={cn(
                       "rounded-full px-2.5 py-0.5 text-xs font-medium tabular-nums",
-                      s.avgR != null && s.avgR < 0 ? "bg-loss/15 text-loss" : "bg-profit/15 text-profit",
+                      s.avgR != null && s.avgR < 0 ? "bg-loss/20 text-loss" : "bg-profit/20 text-profit",
                     )}
                   >
                     {formatR(s.avgR)} / Trade
@@ -271,7 +271,7 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
                           <span
                             className={cn(
                               "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md",
-                              insight.tone === "good" ? "bg-profit/15 text-profit" : "bg-warning/15 text-warning",
+                              insight.tone === "good" ? "bg-profit/20 text-profit" : "bg-warning/20 text-warning",
                             )}
                           >
                             {insight.tone === "good" ? (

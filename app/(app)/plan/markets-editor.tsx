@@ -12,8 +12,8 @@ type Row = MarketPlan & { key: string };
 const emptyRow = (): Row => ({ key: crypto.randomUUID(), symbol: "", bias: null, levels: "", scenario: "" });
 
 const BIAS_STYLE: Record<Bias, { icon: typeof ArrowUp; active: string }> = {
-  bullish: { icon: ArrowUp, active: "bg-profit/15 text-profit" },
-  bearish: { icon: ArrowDown, active: "bg-loss/15 text-loss" },
+  bullish: { icon: ArrowUp, active: "bg-profit/20 text-profit" },
+  bearish: { icon: ArrowDown, active: "bg-loss/20 text-loss" },
   neutral: { icon: MoveHorizontal, active: "bg-foreground/10 text-foreground" },
 };
 

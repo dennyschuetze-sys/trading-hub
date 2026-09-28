@@ -53,10 +53,10 @@ function LimitCell({ label, value, max, ratio, hint }: { label: string; value: s
 }
 
 const STATUS_STYLE: Record<RuleStatus, { card: string; wash: string; pill: string }> = {
-  ok: { card: "ring-profit/25", wash: "--profit", pill: "bg-profit/15 text-profit ring-profit/35" },
-  warning: { card: "ring-warning/35", wash: "--warning", pill: "bg-warning/15 text-warning ring-warning/40" },
-  danger: { card: "ring-loss/40", wash: "--loss", pill: "bg-loss/15 text-loss ring-loss/40" },
-  breached: { card: "ring-loss/40", wash: "--loss", pill: "bg-loss/15 text-loss ring-loss/40" },
+  ok: { card: "ring-profit/25", wash: "--profit", pill: "bg-profit/20 text-profit ring-profit/35" },
+  warning: { card: "ring-warning/35", wash: "--warning", pill: "bg-warning/20 text-warning ring-warning/40" },
+  danger: { card: "ring-loss/40", wash: "--loss", pill: "bg-loss/20 text-loss ring-loss/40" },
+  breached: { card: "ring-loss/40", wash: "--loss", pill: "bg-loss/20 text-loss ring-loss/40" },
 };
 
 export type StatusCheck = { label: string; tone: Tone; text: string };

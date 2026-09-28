@@ -48,7 +48,7 @@ export function EntryForm({ accounts, today }: { accounts: AccountOption[]; toda
             aria-pressed={type === value}
             onClick={() => setType(value)}
             className={cn(
-              type === value && (value === "payout" ? "border-profit bg-profit/15 text-profit hover:bg-profit/20" : "border-loss bg-loss/15 text-loss hover:bg-loss/20"),
+              type === value && (value === "payout" ? "border-profit bg-profit/20 text-profit hover:bg-profit/25" : "border-loss bg-loss/20 text-loss hover:bg-loss/25"),
             )}
           >
             {label}
