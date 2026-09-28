@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CandlestickChart } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { navGroups } from "@/lib/navigation";
+import { activeNavHref, navGroups } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "./sidebar-state";
 
@@ -16,6 +16,7 @@ export function SidebarNav({ onNavigate, collapsible = false }: { onNavigate?: (
   const pathname = usePathname();
   const sidebar = useSidebar();
   const collapsed = collapsible && sidebar.collapsed;
+  const activeHref = activeNavHref(pathname);
 
   return (
     <div className={cn("flex h-full flex-col", collapsed ? "gap-4" : "gap-6")}>
@@ -42,7 +43,7 @@ export function SidebarNav({ onNavigate, collapsible = false }: { onNavigate?: (
               </p>
             )}
             {group.items.map(({ href, label, icon: Icon }) => {
-              const active = pathname === href || pathname.startsWith(`${href}/`);
+              const active = href === activeHref;
               const link = (
                 <Link
                   key={href}

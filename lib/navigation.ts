@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   FlaskConical,
   FlaskRound,
+  GalleryVerticalEnd,
   Images,
   Landmark,
   LayoutDashboard,
@@ -45,6 +46,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/strategies", label: "Strategien & Wissen", icon: BookOpen, phase: 4 },
       { href: "/screenshots", label: "Screenshots", icon: Images, phase: 4 },
+      { href: "/plan/charts", label: "Chart-Rückblick", icon: GalleryVerticalEnd, phase: 5 },
       { href: "/risk", label: "Risiko-Tools", icon: ShieldAlert, phase: 8 },
       { href: "/goals", label: "Ziele & Reviews", icon: Target, phase: 9 },
       { href: "/backtesting", label: "Backtesting", icon: FlaskConical, phase: 10 },
@@ -57,6 +59,14 @@ export const navGroups: NavGroup[] = [
 ];
 
 export const navItems = navGroups.flatMap((g) => g.items);
+
+/** Aktiver Menüpunkt: der längste passende Pfad – „/plan/charts“ markiert nicht zusätzlich „/plan“. */
+export function activeNavHref(pathname: string): string | undefined {
+  return navItems
+    .map((i) => i.href)
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+}
 
 /** Cookie für die ein-/ausgeblendete Seitenleiste – hier statt in der Client-Komponente, damit der Server den Namen lesen kann. */
 export const SIDEBAR_COOKIE = "sidebar";
