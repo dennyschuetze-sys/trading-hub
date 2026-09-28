@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isValidDate, parseMarkets, parseRoutine } from "@/lib/daily-plan";
+import { isChartKind, isValidDate, parseMarkets, parseNoTrade, parseRoutine, type ChartKind } from "@/lib/daily-plan";
 import { bool, list, text, type FormState } from "@/lib/form-data";
+import { dayBoundary } from "@/lib/trading";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -55,9 +56,19 @@ export async function saveReview(date: string, _prev: FormState, formData: FormD
   const supabase = await requireUser();
   if (!isValidDate(date)) return { error: "Ungültiges Datum." };
 
+  // „Kein Trade“ nur, wenn wirklich keine (Live-)Trades an dem Tag erfasst sind
+  const { count, error: countError } = await supabase
+    .from("trades")
+    .select("id", { count: "exact", head: true })
+    .eq("is_backtest", false)
+    .gte("entry_time", dayBoundary(date, "start"))
+    .lte("entry_time", dayBoundary(date, "end"));
+  if (countError) return { error: `Speichern fehlgeschlagen: ${countError.message}` };
+
   const { error } = await supabase.from("daily_plans").upsert(
     {
       plan_date: date,
+      ...parseNoTrade(formData, count ?? 0),
       went_well: clipped(formData, "went_well", 10000),
       to_improve: clipped(formData, "to_improve", 10000),
       lesson: clipped(formData, "lesson", 2000),
@@ -83,4 +94,37 @@ export async function deletePlan(date: string) {
   revalidatePath("/plan");
   revalidatePath("/dashboard");
   redirect(`/plan?date=${date}`);
+}
+
+// Chart-Bilder zum Tag – hochgeladen wird im Browser (lib/screenshot-upload.ts), hier nur Ändern und Löschen
+
+function revalidateCharts() {
+  revalidatePath("/plan");
+  revalidatePath("/plan/charts");
+  revalidatePath("/plan/history");
+}
+
+export async function updateDayChart(id: string, values: { kind: ChartKind; symbol: string; note: string }) {
+  const supabase = await requireUser();
+  if (!UUID.test(id)) throw new Error("Ungültiges Bild");
+  const symbol = values.symbol.trim().slice(0, 30).toUpperCase();
+  const note = values.note.trim().slice(0, 1000);
+  const { error } = await supabase
+    .from("day_charts")
+    .update({ kind: isChartKind(values.kind) ? values.kind : "market", symbol: symbol || null, note: note || null })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidateCharts();
+}
+
+export async function deleteDayChart(id: string) {
+  const supabase = await requireUser();
+  if (!UUID.test(id)) throw new Error("Ungültiges Bild");
+  const { data: chart } = await supabase.from("day_charts").select("storage_path").eq("id", id).maybeSingle();
+  if (!chart) return;
+
+  await supabase.storage.from("screenshots").remove([chart.storage_path]);
+  const { error } = await supabase.from("day_charts").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidateCharts();
 }

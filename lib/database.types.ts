@@ -341,6 +341,8 @@ export type Database = {
           mood_after: number | null;
           mood_before: number | null;
           news_notes: string | null;
+          no_trade: boolean;
+          no_trade_reason: string | null;
           plan_date: string;
           premarket_notes: string | null;
           reviewed_at: string | null;
@@ -365,6 +367,8 @@ export type Database = {
           mood_after?: number | null;
           mood_before?: number | null;
           news_notes?: string | null;
+          no_trade?: boolean;
+          no_trade_reason?: string | null;
           plan_date: string;
           premarket_notes?: string | null;
           reviewed_at?: string | null;
@@ -376,6 +380,30 @@ export type Database = {
           went_well?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["daily_plans"]["Insert"]>;
+        Relationships: [];
+      };
+      day_charts: {
+        Row: {
+          chart_date: string;
+          created_at: string;
+          id: string;
+          kind: string;
+          note: string | null;
+          storage_path: string;
+          symbol: string | null;
+          user_id: string;
+        };
+        Insert: {
+          chart_date: string;
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          note?: string | null;
+          storage_path: string;
+          symbol?: string | null;
+          user_id?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["day_charts"]["Insert"]>;
         Relationships: [];
       };
       goals: {

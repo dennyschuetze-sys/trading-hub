@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { CheckCircle2, CircleDashed, History, LineChart, XCircle } from "lucide-react";
+import { CheckCircle2, CircleDashed, CircleSlash2, History, Images, LineChart, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/forms/delete-button";
 import {
+  NO_TRADE_REASONS,
   checkDay,
+  isNoTradeDay,
   isValidDate,
   planStatus,
   readMarkets,
@@ -14,13 +16,15 @@ import {
 } from "@/lib/daily-plan";
 import { eventTime } from "@/components/news/event-list";
 import { berlinDay, filterEvents } from "@/lib/calendar";
+import { DAY_CHART_COLUMNS, withSignedUrls } from "@/lib/day-charts";
 import { getCalendar, getNewsSettings } from "@/lib/feeds";
 import { rememberEvents } from "@/lib/risk-queries";
 import { createClient } from "@/lib/supabase/server";
-import { dayBoundary, formatMoney, formatDateTime, plural, pnlClass } from "@/lib/trading";
+import { dayBoundary, formatMoney, formatDateTime, labelFor, plural, pnlClass } from "@/lib/trading";
 import { cn } from "@/lib/utils";
 import { deletePlan } from "./actions";
 import { DateNav } from "./date-nav";
+import { DayCharts } from "./day-charts";
 import { PlanLabel, PlanSection } from "./plan-section";
 import { PremarketForm } from "./premarket-form";
 import { ReviewForm } from "./review-form";
@@ -49,7 +53,7 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
     .filter((e) => berlinDay(e.time) === date)
     .map((e) => ({ id: e.id, title: e.title, currency: e.currency, impact: e.impact, timeLabel: eventTime(e) }));
 
-  const [{ data: plan }, { data: previous }, { data: strategies }, { data: trades }] = await Promise.all([
+  const [{ data: plan }, { data: previous }, { data: strategies }, { data: trades }, { data: chartRows }, { data: auth }] = await Promise.all([
     supabase.from("daily_plans").select("*").eq("plan_date", date).maybeSingle(),
     supabase.from("daily_plans").select("routine").lt("plan_date", date).order("plan_date", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("strategies").select("id, name, status").order("name"),
@@ -60,12 +64,16 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
       .gte("entry_time", dayBoundary(date, "start"))
       .lte("entry_time", dayBoundary(date, "end"))
       .order("entry_time"),
+    supabase.from("day_charts").select(DAY_CHART_COLUMNS).eq("chart_date", date).order("created_at"),
+    supabase.auth.getUser(),
   ]);
+  const charts = await withSignedUrls(supabase, chartRows ?? []);
 
   const status = planStatus(plan);
   const StatusIcon = STATUS[status].icon;
   const dayTrades = trades ?? [];
   const check = checkDay(plan, dayTrades);
+  const noTrade = isNoTradeDay(plan, dayTrades.length);
   const byCurrency = new Map<string, number>();
   dayTrades.forEach((t) => {
     if (t.status !== "closed" || t.net_pnl == null) return;
@@ -107,8 +115,8 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
     {
       href: "#session",
       title: "Session",
-      detail: plural(dayTrades.length, "Trade", "Trades"),
-      progress: dayTrades.length ? 1 : 0,
+      detail: noTrade ? "Kein Trade" : plural(dayTrades.length, "Trade", "Trades"),
+      progress: dayTrades.length || noTrade ? 1 : 0,
     },
     {
       href: "#nach-der-session",
@@ -138,7 +146,7 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
               {plan && (
                 <DeleteButton
                   title="Tagesplan löschen?"
-                  description="Plan und Review für diesen Tag werden gelöscht. Deine Trades bleiben erhalten."
+                  description="Plan und Review für diesen Tag werden gelöscht. Deine Trades und Chart-Bilder bleiben erhalten."
                   onConfirm={deletePlan.bind(null, date)}
                 />
               )}
@@ -149,6 +157,11 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
             <Button variant="outline" asChild>
               <Link href="/plan/history">
                 <History className="size-4" /> Verlauf
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/plan/charts">
+                <Images className="size-4" /> Chart-Rückblick
               </Link>
             </Button>
           </div>
@@ -190,7 +203,7 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
         events={dayEvents}
       />
 
-      <PlanSection id="session" number="04" title="Session" description="Trades mit Einstieg an diesem Tag (Berliner Zeit)">
+      <PlanSection id="session" number="04" title="Session" description="Trades mit Einstieg an diesem Tag (Berliner Zeit) und dein Chart-Rückblick">
         <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-border ring-1 ring-foreground/[0.07] lg:grid-cols-4">
           <div className="bg-card px-5 py-4">
             <PlanLabel>Ergebnis</PlanLabel>
@@ -238,18 +251,45 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
               </li>
             ))}
           </ul>
+        ) : noTrade ? (
+          <div className="flex flex-col items-center gap-1.5 rounded-xl bg-card px-6 py-8 text-center ring-1 ring-foreground/[0.07]">
+            <CircleSlash2 className="size-5 text-brand" aria-hidden />
+            <p className="text-sm font-medium">Kein Trade an diesem Tag</p>
+            <p className="text-sm text-muted-foreground">
+              {plan?.no_trade_reason ? labelFor(NO_TRADE_REASONS, plan.no_trade_reason) : "Im Review festgehalten"}
+            </p>
+          </div>
         ) : (
           <div className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-foreground/15 px-6 py-8 text-center">
             <LineChart className="size-5 text-muted-foreground/60" aria-hidden />
             <p className="text-sm font-medium">Keine Trades an diesem Tag</p>
-            <Link href="/journal/new" className="text-sm text-brand underline-offset-4 hover:underline">
-              Trade erfassen
-            </Link>
+            <p className="text-sm">
+              <Link href="/journal/new" className="text-brand underline-offset-4 hover:underline">
+                Trade erfassen
+              </Link>
+              <span className="text-muted-foreground"> · </span>
+              <a href="#nach-der-session" className="text-brand underline-offset-4 hover:underline">
+                Als „Kein Trade“ festhalten
+              </a>
+            </p>
+          </div>
+        )}
+
+        {auth.user && (
+          <div id="chart-rueckblick" className="scroll-mt-20">
+            <DayCharts
+              key={date}
+              date={date}
+              userId={auth.user.id}
+              charts={charts}
+              markets={[...new Set(markets.map((m) => m.symbol).filter(Boolean))]}
+              defaultKind={plan?.no_trade_reason === "missed_setup" ? "missed_setup" : "market"}
+            />
           </div>
         )}
       </PlanSection>
 
-      <ReviewForm key={`review-${date}-${plan?.updated_at ?? "neu"}`} date={date} plan={plan} />
+      <ReviewForm key={`review-${date}-${plan?.updated_at ?? "neu"}`} date={date} plan={plan} tradeCount={dayTrades.length} />
     </div>
   );
 }

@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_ROUTINE,
   checkDay,
+  isChartKind,
+  isNoTradeDay,
   isValidDate,
   parseMarkets,
+  parseNoTrade,
   parseRoutine,
   planStatus,
   readMarkets,
@@ -110,5 +113,31 @@ describe("checkDay", () => {
       "planned",
       "reviewed",
     ]);
+  });
+});
+
+describe("Kein Trade", () => {
+  it("übernimmt Auswahl und Grund", () => {
+    expect(parseNoTrade(form([["no_trade", "true"], ["no_trade_reason", "missed_setup"]]), 0)).toEqual({
+      no_trade: true,
+      no_trade_reason: "missed_setup",
+    });
+    expect(parseNoTrade(form([["no_trade", "true"], ["no_trade_reason", ""]]), 0)).toEqual({ no_trade: true, no_trade_reason: null });
+  });
+
+  it("verwirft unbekannte Gründe und einen Grund ohne Auswahl", () => {
+    expect(parseNoTrade(form([["no_trade", "true"], ["no_trade_reason", "langeweile"]]), 0).no_trade_reason).toBeNull();
+    expect(parseNoTrade(form([["no_trade", "false"], ["no_trade_reason", "market"]]), 0)).toEqual({ no_trade: false, no_trade_reason: null });
+  });
+
+  it("gilt nie, wenn an dem Tag Trades erfasst sind", () => {
+    expect(parseNoTrade(form([["no_trade", "true"], ["no_trade_reason", "no_setup"]]), 2)).toEqual({ no_trade: false, no_trade_reason: null });
+    expect(isNoTradeDay({ no_trade: true }, 1)).toBe(false);
+    expect(isNoTradeDay({ no_trade: true }, 0)).toBe(true);
+    expect(isNoTradeDay(null, 0)).toBe(false);
+  });
+
+  it("kennt die Bild-Arten", () => {
+    expect([isChartKind("market"), isChartKind("missed_setup"), isChartKind("trade"), isChartKind(null)]).toEqual([true, true, false, false]);
   });
 });

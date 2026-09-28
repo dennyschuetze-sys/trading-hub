@@ -20,6 +20,26 @@ export const DEFAULT_ROUTINE = [
   "Mentaler Zustand geprüft – bereit zu traden?",
 ];
 
+export type NoTradeReason = "no_setup" | "market" | "missed_setup" | "away" | "rule_pause";
+
+export const NO_TRADE_REASONS: { value: NoTradeReason; label: string }[] = [
+  { value: "no_setup", label: "Kein Setup laut Plan" },
+  { value: "market", label: "Markt ungünstig" },
+  { value: "missed_setup", label: "Setup verpasst" },
+  { value: "away", label: "Nicht am Platz" },
+  { value: "rule_pause", label: "Pause nach Regel" },
+];
+
+/** Art eines Chart-Bilds zum Tag (Tabelle day_charts). */
+export type ChartKind = "market" | "missed_setup";
+
+export const CHART_KINDS: { value: ChartKind; label: string }[] = [
+  { value: "market", label: "Tagesverlauf" },
+  { value: "missed_setup", label: "Verpasstes Setup" },
+];
+
+export const isChartKind = (value: unknown): value is ChartKind => CHART_KINDS.some((k) => k.value === value);
+
 export const SCALE_LABELS: Record<"mood" | "energy" | "discipline", string[]> = {
   mood: ["Sehr schlecht", "Schlecht", "Neutral", "Gut", "Sehr gut"],
   energy: ["Erschöpft", "Müde", "Normal", "Wach", "Voller Energie"],
@@ -76,6 +96,27 @@ export function parseRoutine(formData: FormData): RoutineItem[] {
     .map((label, i) => ({ label: clip(label, 200), done: done.has(String(i)) }))
     .filter((r) => r.label)
     .slice(0, 30);
+}
+
+/**
+ * „Kein Trade“ aus dem Review (`no_trade`, `no_trade_reason`). Sind an dem Tag Trades erfasst,
+ * ist es nie ein Kein-Trade-Tag – auch wenn das Formular etwas anderes schickt.
+ */
+export function parseNoTrade(
+  formData: FormData,
+  tradeCount: number,
+): { no_trade: boolean; no_trade_reason: NoTradeReason | null } {
+  const noTrade = tradeCount === 0 && formData.get("no_trade") === "true";
+  const reason = String(formData.get("no_trade_reason") ?? "");
+  return {
+    no_trade: noTrade,
+    no_trade_reason: noTrade && NO_TRADE_REASONS.some((r) => r.value === reason) ? (reason as NoTradeReason) : null,
+  };
+}
+
+/** Markierter Kein-Trade-Tag – zählt nur, solange (z. B. nach einem Import) keine Trades dazugekommen sind. */
+export function isNoTradeDay(plan: Pick<DailyPlan, "no_trade"> | null, tradeCount: number): boolean {
+  return Boolean(plan?.no_trade) && tradeCount === 0;
 }
 
 /** Robustes Lesen der JSON-Spalten (Daten könnten aus älteren Versionen stammen). */

@@ -1,21 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Loader2, Plus } from "lucide-react";
+import { Check, CircleSlash2, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ChoiceChips } from "@/components/forms/choice-chips";
 import { ScalePicker } from "@/components/forms/scale-picker";
+import { segmentClass } from "@/components/forms/yes-no-toggle";
 import { useFormAction } from "@/components/forms/use-form-action";
-import { SCALE_LABELS, type DailyPlan } from "@/lib/daily-plan";
+import { NO_TRADE_REASONS, SCALE_LABELS, isNoTradeDay, type DailyPlan } from "@/lib/daily-plan";
 import { formatDateTime } from "@/lib/trading";
 import { cn } from "@/lib/utils";
 import { saveReview } from "./actions";
 import { PlanCard, PlanLabel, PlanSection } from "./plan-section";
 
-export function ReviewForm({ date, plan }: { date: string; plan: DailyPlan | null }) {
+export function ReviewForm({ date, plan, tradeCount }: { date: string; plan: DailyPlan | null; tradeCount: number }) {
   const { state, onSubmit, pending } = useFormAction(saveReview.bind(null, date));
   const [followedPlan, setFollowedPlan] = useState(plan?.followed_plan == null ? "" : String(plan.followed_plan));
+  const [noTrade, setNoTrade] = useState(isNoTradeDay(plan, tradeCount));
+  const [noTradeReason, setNoTradeReason] = useState(plan?.no_trade_reason ?? null);
 
   return (
     <PlanSection
@@ -28,6 +32,52 @@ export function ReviewForm({ date, plan }: { date: string; plan: DailyPlan | nul
       }
     >
       <form onSubmit={onSubmit} className="grid gap-4 rounded-2xl bg-warning/[0.025] p-3 ring-1 ring-warning/10 sm:p-5">
+        {/* Nur ohne erfasste Trades – sonst widerspräche die Auswahl dem Journal */}
+        {tradeCount === 0 && (
+          <PlanCard className="grid gap-4">
+            <input type="hidden" name="no_trade" value={String(noTrade)} />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="grid gap-1">
+                <PlanLabel>Session ohne Trade</PlanLabel>
+                <p className="text-sm text-muted-foreground">Heute nicht gehandelt? Halte fest, warum – auch ein bewusster Verzicht ist ein Ergebnis.</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={noTrade}
+                onClick={() => setNoTrade((v) => !v)}
+                className={cn(segmentClass(noTrade), "h-10 px-4")}
+              >
+                <CircleSlash2 className="size-4" aria-hidden />
+                Kein Trade heute
+              </button>
+            </div>
+            {noTrade && (
+              <div className="grid gap-2">
+                <span id="no_trade_reason-label" className="text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+                  Grund <span className="font-normal tracking-normal normal-case">(optional)</span>
+                </span>
+                <ChoiceChips
+                  name="no_trade_reason"
+                  options={NO_TRADE_REASONS}
+                  defaultValue={noTradeReason}
+                  labelledBy="no_trade_reason-label"
+                  onChange={setNoTradeReason}
+                />
+                {noTradeReason === "missed_setup" && (
+                  <p className="text-xs text-muted-foreground">
+                    Tipp: Lade den Chart oben im{" "}
+                    <a href="#chart-rueckblick" className="text-brand underline-offset-4 hover:underline">
+                      Chart-Rückblick
+                    </a>{" "}
+                    als „Verpasstes Setup“ hoch.
+                  </p>
+                )}
+              </div>
+            )}
+          </PlanCard>
+        )}
+
         <PlanCard className="grid gap-5">
           <PlanLabel>Reflexion</PlanLabel>
           <div className="grid gap-6 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)]">

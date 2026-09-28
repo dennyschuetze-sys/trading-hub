@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { ArrowLeft, CalendarCheck, CheckCircle2, CircleDashed, XCircle } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Camera, CheckCircle2, CircleDashed, CircleSlash2, Images, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { longDate } from "@/components/charts/format";
 import { PageHeader } from "@/components/layout/page-header";
-import { BIASES, checkDay, planStatus, readMarkets, readRoutine } from "@/lib/daily-plan";
+import { BIASES, NO_TRADE_REASONS, checkDay, isNoTradeDay, planStatus, readMarkets, readRoutine } from "@/lib/daily-plan";
 import { berlinParts } from "@/lib/stats";
 import { createClient } from "@/lib/supabase/server";
 import { dayBoundary, formatMoney, labelFor } from "@/lib/trading";
@@ -21,20 +21,29 @@ export default async function PlanHistoryPage() {
 
   const list = plans ?? [];
   const oldest = list.at(-1)?.plan_date;
-  const { data: trades } = oldest
-    ? await supabase
-        .from("trades")
-        .select("entry_time, net_pnl, status, accounts(currency)")
-        .eq("is_backtest", false)
-        .gte("entry_time", dayBoundary(oldest, "start"))
-        .limit(5000)
-    : { data: [] };
+  const [{ data: trades }, { data: charts }] = oldest
+    ? await Promise.all([
+        supabase
+          .from("trades")
+          .select("entry_time, net_pnl, status, accounts(currency)")
+          .eq("is_backtest", false)
+          .gte("entry_time", dayBoundary(oldest, "start"))
+          .limit(5000),
+        supabase.from("day_charts").select("chart_date").gte("chart_date", oldest).limit(5000),
+      ])
+    : [{ data: [] }, { data: [] }];
 
   const tradesByDay = new Map<string, NonNullable<typeof trades>>();
   (trades ?? []).forEach((t) => {
     const day = berlinParts(t.entry_time).date;
     tradesByDay.set(day, [...(tradesByDay.get(day) ?? []), t]);
   });
+
+  const chartsByDay = new Map<string, number>();
+  (charts ?? []).forEach((c) => chartsByDay.set(c.chart_date, (chartsByDay.get(c.chart_date) ?? 0) + 1));
+
+  const noTradeDays = list.filter((p) => isNoTradeDay(p, tradesByDay.get(p.plan_date)?.length ?? 0));
+  const missedSetups = noTradeDays.filter((p) => p.no_trade_reason === "missed_setup").length;
 
   const reviewed = list.filter((p) => p.reviewed_at);
   const disciplined = reviewed.filter((p) => p.discipline != null);
@@ -45,11 +54,18 @@ export default async function PlanHistoryPage() {
   return (
     <>
       <PageHeader title="Verlauf der Tagespläne" description="Die letzten 90 geplanten Tage">
-        <Button variant="outline" asChild>
-          <Link href="/plan">
-            <ArrowLeft className="size-4" /> Zum heutigen Plan
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/plan">
+              <ArrowLeft className="size-4" /> Zum heutigen Plan
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/plan/charts">
+              <Images className="size-4" /> Chart-Rückblick
+            </Link>
+          </Button>
+        </div>
       </PageHeader>
 
       {!list.length ? (
@@ -64,7 +80,7 @@ export default async function PlanHistoryPage() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="gap-0 py-4">
               <CardContent className="px-4">
                 <p className="text-sm text-muted-foreground">Geplante Tage</p>
@@ -83,6 +99,19 @@ export default async function PlanHistoryPage() {
               <CardContent className="px-4">
                 <p className="text-sm text-muted-foreground">Ø Disziplin</p>
                 <p className="text-2xl font-semibold">{avgDiscipline == null ? "–" : `${avgDiscipline.toFixed(1).replace(".", ",")} / 5`}</p>
+              </CardContent>
+            </Card>
+            <Card className="gap-0 py-4">
+              <CardContent className="px-4">
+                <p className="text-sm text-muted-foreground">Tage ohne Trade</p>
+                <p className="text-2xl font-semibold">
+                  {noTradeDays.length}{" "}
+                  {missedSetups > 0 && (
+                    <span className="text-base font-normal text-muted-foreground">
+                      (davon {missedSetups} × Setup verpasst)
+                    </span>
+                  )}
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -116,6 +145,8 @@ export default async function PlanHistoryPage() {
                     const limitsSet = check.tradesOk != null || check.lossesOk != null;
                     const limitsOk = check.tradesOk !== false && check.lossesOk !== false;
                     const status = planStatus(p);
+                    const noTrade = isNoTradeDay(p, dayTrades.length);
+                    const chartCount = chartsByDay.get(p.plan_date) ?? 0;
 
                     return (
                       <TableRow key={p.id} className="relative">
@@ -123,6 +154,13 @@ export default async function PlanHistoryPage() {
                           <Link href={`/plan?date=${p.plan_date}`} className="font-medium after:absolute after:inset-0">
                             {longDate(p.plan_date)}
                           </Link>
+                          {chartCount > 0 && (
+                            <span className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
+                              <Camera className="size-3.5" aria-hidden />
+                              {chartCount}
+                              <span className="sr-only">{chartCount === 1 ? " Chart-Bild" : " Chart-Bilder"}</span>
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="max-w-72">
                           {p.focus && <p className="truncate">{p.focus}</p>}
@@ -140,7 +178,22 @@ export default async function PlanHistoryPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">{check.trades}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {noTrade ? (
+                            <span className="inline-flex flex-col items-end">
+                              <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                                <CircleSlash2 className="size-3.5 text-brand" aria-hidden /> Kein Trade
+                              </span>
+                              {p.no_trade_reason && (
+                                <span className="text-xs whitespace-nowrap text-muted-foreground">
+                                  {labelFor(NO_TRADE_REASONS, p.no_trade_reason)}
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            check.trades
+                          )}
+                        </TableCell>
                         <TableCell className="text-right whitespace-nowrap tabular-nums">
                           {sums.size ? [...sums].map(([cur, v]) => formatMoney(v, cur, true)).join(" · ") : "–"}
                         </TableCell>
