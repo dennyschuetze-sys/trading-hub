@@ -6,6 +6,9 @@ import { TIME_ZONE, formatMoney } from "@/lib/trading";
 
 // Ableitungen für das Dashboard – nur aus vorhandenen Daten, nichts wird geschätzt.
 
+/** Gewählter Account fürs Dashboard; fehlt der Cookie, gilt der Account mit dem letzten Trade. */
+export const DASHBOARD_ACCOUNT_COOKIE = "dashboard-account";
+
 const clock = (iso: string) =>
   new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: TIME_ZONE }).format(new Date(iso));
 

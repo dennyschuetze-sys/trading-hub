@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { Info, Plus, Upload, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { longDate } from "@/components/charts/format";
 import { PnlCalendar } from "@/components/charts/pnl-calendar";
 import { STATUS_META } from "@/components/charts/rule-meter";
 import { StatSection, StatStrip } from "@/components/charts/stat-tile";
+import { AccountSwitch } from "@/components/dashboard/account-switch";
 import { AccountCard } from "@/components/dashboard/accounts";
 import { EquityCard, InsightsCard, PulseCard } from "@/components/dashboard/performance";
 import { RecentTradesCard } from "@/components/dashboard/recent-trades";
@@ -15,7 +17,7 @@ import { AutoRefresh } from "@/components/layout/auto-refresh";
 import { PageHeader } from "@/components/layout/page-header";
 import { eventTime } from "@/components/news/event-list";
 import { berlinDay, filterEvents, nextEvent } from "@/lib/calendar";
-import { attentionItems, currentStreak, recentForm, tradingStatus } from "@/lib/dashboard";
+import { DASHBOARD_ACCOUNT_COOKIE, attentionItems, currentStreak, recentForm, tradingStatus } from "@/lib/dashboard";
 import { planStatus } from "@/lib/daily-plan";
 import { buildIndex, computeStreaks, scoreDays } from "@/lib/discipline";
 import { getCalendar, getNewsSettings } from "@/lib/feeds";
@@ -30,7 +32,7 @@ import { hasAnyRule } from "@/lib/risk-rules";
 import { rangeStart, resolveScope } from "@/lib/scope";
 import { berlinParts, closeTime, closedTrades, dailyResults, equityCurve, maxDrawdown, standardBreakdowns, summarize } from "@/lib/stats";
 import { createClient } from "@/lib/supabase/server";
-import { PHASES, SESSIONS, TIME_ZONE, formatMoney, formatNumber, formatR, labelFor, plural } from "@/lib/trading";
+import { ACCOUNT_STATUSES, PHASES, SESSIONS, TIME_ZONE, formatMoney, formatNumber, formatR, labelFor, plural } from "@/lib/trading";
 
 const clock = (iso: string) =>
   new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: TIME_ZONE }).format(new Date(iso));
@@ -39,12 +41,13 @@ const toneOf = (v: number | null | undefined) => (v == null || v === 0 ? null : 
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const [{ data: accounts }, trades] = await Promise.all([
+  const [{ data: accounts }, trades, cookieStore] = await Promise.all([
     supabase
       .from("accounts")
       .select("id, name, firm, currency, starting_balance, status, phase, account_type, max_daily_loss, max_drawdown, drawdown_type, profit_target, min_trading_days")
       .order("name"),
     fetchStatTrades(supabase),
+    cookies(),
   ]);
   const list = accounts ?? [];
 
@@ -89,9 +92,12 @@ export default async function DashboardPage() {
   const nameOf = new Map(list.map((a) => [a.id, a.name]));
   const currencyOf = new Map(list.map((a) => [a.id, a.currency]));
 
-  // Fokus: Account mit dem letzten Trade – Performance, Equity und Kalender beziehen sich darauf
-  const focus = resolveScope(list, undefined, trades)!;
-  const focusAccount = list.find((a) => a.id === focus.accountIds[0])!;
+  // Fokus: gewählter Account, sonst der mit dem letzten Trade – Performance, Equity und Kalender beziehen sich darauf.
+  // Ein gelöschter Account im Cookie fällt still auf die Automatik zurück.
+  const saved = cookieStore.get(DASHBOARD_ACCOUNT_COOKIE)?.value;
+  const chosen = list.some((a) => a.id === saved) ? saved! : "";
+  const autoAccount = list.find((a) => a.id === resolveScope(list, undefined, trades)!.accountIds[0])!;
+  const focusAccount = list.find((a) => a.id === chosen) ?? autoAccount;
   const focusTrades = trades.filter((t) => t.account_id === focusAccount.id);
   const currency = focusAccount.currency;
   const money = (v: number | null, signed = false) => formatMoney(v, currency, signed);
@@ -221,7 +227,17 @@ export default async function DashboardPage() {
   return (
     <>
       <PageHeader title="Dashboard" description={longDate(today)}>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {list.length > 1 && (
+            <AccountSwitch
+              value={chosen}
+              autoLabel={`Automatisch · ${autoAccount.name}`}
+              options={list.map((a) => ({
+                value: a.id,
+                label: a.status === "active" ? a.name : `${a.name} · ${labelFor(ACCOUNT_STATUSES, a.status)}`,
+              }))}
+            />
+          )}
           <Button variant="outline" asChild>
             <Link href="/import">
               <Upload className="size-4" /> Import
