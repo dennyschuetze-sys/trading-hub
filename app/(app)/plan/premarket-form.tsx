@@ -39,7 +39,7 @@ export function PremarketForm({
       <PlanSection id="vor-der-session" number="01" title="Vor der Session" description="Plane deinen Tag, bevor der Markt dich plant.">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
           <PlanCard
-            className="grid content-start gap-3 ring-profit/20 hover:ring-profit/30"
+            className="grid content-start gap-3 ring-brand/20 hover:ring-brand/30"
           >
             <PlanLabel htmlFor="focus">Fokus des Tages</PlanLabel>
             <Input
@@ -48,7 +48,7 @@ export function PremarketForm({
               defaultValue={plan?.focus ?? ""}
               maxLength={500}
               placeholder="Geduldig bleiben und nur A+ Setups handeln."
-              className="h-14 border-profit/25 px-4 text-lg font-medium tracking-tight md:text-lg"
+              className="h-14 border-brand/25 px-4 text-lg font-medium tracking-tight md:text-lg"
             />
             <p className="text-xs text-muted-foreground/80">Ein Satz, z. B. „Nur A+-Setups, nach 2 Verlusten Schluss“</p>
           </PlanCard>
@@ -93,7 +93,7 @@ export function PremarketForm({
               ) : (
                 <p className="rounded-lg border border-dashed border-foreground/15 px-3 py-2.5 text-sm text-muted-foreground">
                   Noch keine Strategien angelegt.{" "}
-                  <Link href="/strategies/new" className="text-profit underline-offset-4 hover:underline">
+                  <Link href="/strategies/new" className="text-brand underline-offset-4 hover:underline">
                     Strategie anlegen
                   </Link>
                 </p>
@@ -121,7 +121,7 @@ export function PremarketForm({
                         max={100}
                         defaultValue={value ?? ""}
                         placeholder="–"
-                        className="w-16 min-w-0 bg-transparent text-3xl font-semibold tracking-tight tabular-nums outline-none placeholder:text-muted-foreground/40 [appearance:textfield] focus-visible:text-profit [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        className="w-16 min-w-0 bg-transparent text-3xl font-semibold tracking-tight tabular-nums outline-none placeholder:text-muted-foreground/40 [appearance:textfield] focus-visible:text-brand [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
                       <span className="text-xs text-muted-foreground">{unit}</span>
                     </div>
@@ -158,7 +158,7 @@ export function PremarketForm({
               "Noch nicht gespeichert"
             )}
           </p>
-          <Button type="submit" disabled={pending} className="h-10 bg-profit px-5 text-xs font-bold tracking-[0.08em] text-background uppercase hover:bg-profit/90">
+          <Button type="submit" disabled={pending} className="h-10 bg-brand px-5 text-xs font-bold tracking-[0.08em] text-background uppercase hover:bg-brand/90">
             {pending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" strokeWidth={2.5} />}
             {pending ? "Speichern …" : plan ? "Plan aktualisieren" : "Plan speichern"}
           </Button>

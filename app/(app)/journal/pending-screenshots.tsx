@@ -63,8 +63,8 @@ export function PendingScreenshots({ files, onChange, disabled }: { files: File[
           if (!disabled) add(Array.from(e.dataTransfer.files));
         }}
         className={cn(
-          "flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground transition-colors outline-none hover:border-profit/40 focus-visible:ring-3 focus-visible:ring-profit/25",
-          dragging && "border-profit/60 bg-profit/5",
+          "flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground transition-colors outline-none hover:border-brand/40 focus-visible:ring-3 focus-visible:ring-brand/25",
+          dragging && "border-brand/60 bg-brand/5",
         )}
       >
         <ImagePlus className="size-5" aria-hidden />

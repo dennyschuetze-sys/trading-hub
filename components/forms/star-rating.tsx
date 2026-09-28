@@ -41,15 +41,15 @@ export function StarRating({
               aria-label={`${n} von 5 Sternen`}
               onClick={() => choose(active ? null : n)}
               onMouseEnter={() => setHover(n)}
-              className="rounded-md p-1 outline-none focus-visible:ring-2 focus-visible:ring-profit/50"
+              className="rounded-md p-1 outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
             >
               <Star
                 className={cn(
                   "size-8 transition-colors",
                   previewed
-                    ? "fill-profit/35 text-profit/70"
+                    ? "fill-brand/35 text-brand/70"
                     : filled
-                      ? "fill-profit text-profit"
+                      ? "fill-brand text-brand"
                       : "text-muted-foreground/35",
                 )}
                 aria-hidden

@@ -67,11 +67,11 @@ export function ChoiceChips({
   );
 }
 
-/** Chip-Stil: Türkis für Auswahl, gedämpftes Rot für markierte Fehler, sonst dezentes Anthrazit. */
+/** Chip-Stil: Akzentfarbe für Auswahl, gedämpftes Rot für markierte Fehler, sonst dezentes Anthrazit. */
 export const chipClass = (state: "idle" | "selected" | "error") =>
   cn(
-    "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-profit/30",
-    state === "selected" && "border-profit/50 bg-profit/12 font-medium text-profit",
+    "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-brand/30",
+    state === "selected" && "border-brand/50 bg-brand/12 font-medium text-brand",
     state === "error" && "border-loss/50 bg-loss/12 font-medium text-loss",
     state === "idle" && "border-foreground/[0.07] bg-foreground/[0.04] text-muted-foreground hover:border-foreground/20 hover:text-foreground",
   );

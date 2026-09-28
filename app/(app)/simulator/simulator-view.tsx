@@ -658,7 +658,7 @@ function RuleEditor({
           <label key={f.kind} className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
-              className="size-4 accent-[var(--profit)]"
+              className="size-4 accent-brand"
               checked={has({ kind: f.kind })}
               onChange={() => toggle({ kind: f.kind })}
             />

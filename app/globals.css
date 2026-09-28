@@ -13,6 +13,7 @@
   --color-profit: var(--profit);
   --color-loss: var(--loss);
   --color-warning: var(--warning);
+  --color-brand: var(--brand);
   --color-chart-line: var(--chart-line);
   --color-chart-grid: var(--chart-grid);
   --color-chart-axis: var(--chart-axis);
@@ -84,11 +85,15 @@
   --profit: oklch(0.64 0.12 185);
   --loss: oklch(0.55 0.21 25);
   --warning: oklch(0.72 0.16 70);
+  /* Akzent für Auswahl, Fokus und Fortschritt – im Standard-Schema die Gewinnfarbe (auch im Dunkelmodus),
+     Farbschemata setzen einen eigenen, lesbaren Wert */
+  --brand: var(--profit);
   --chart-line: oklch(0.6 0.11 185);
   --chart-grid: #e1e0d9;
   --chart-axis: #898781;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-muted-foreground: oklch(0.556 0 0);
   --sidebar-primary: oklch(0.6 0.11 185);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.6 0.11 185 / 10%);
@@ -131,12 +136,21 @@
   --chart-axis: oklch(0.55 0.008 260);
   --sidebar: oklch(0.16 0.003 260);
   --sidebar-foreground: oklch(0.955 0.002 260);
+  --sidebar-muted-foreground: oklch(0.68 0.008 260);
   --sidebar-primary: oklch(0.74 0.12 180);
   --sidebar-primary-foreground: oklch(0.16 0.003 260);
   --sidebar-accent: oklch(0.74 0.12 180 / 12%);
   --sidebar-accent-foreground: oklch(0.955 0.002 260);
   --sidebar-border: oklch(1 0 0 / 7%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* Seitenleiste mit eigenen Texttönen – so kann ein Farbschema sie auch im hellen Modus dunkel absetzen.
+   Ohne Layer, damit es text-*-Klassen der Sheet-Komponente schlägt. */
+[data-surface="sidebar"] {
+  --foreground: var(--sidebar-foreground);
+  --muted-foreground: var(--sidebar-muted-foreground);
+  color: var(--sidebar-foreground);
 }
 
 @layer base {

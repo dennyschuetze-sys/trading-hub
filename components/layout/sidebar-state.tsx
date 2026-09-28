@@ -44,6 +44,7 @@ export function DesktopSidebar({ children }: { children: React.ReactNode }) {
   return (
     <aside
       id="sidebar"
+      data-surface="sidebar"
       className={cn(
         "sticky top-0 hidden h-screen shrink-0 overflow-hidden border-r bg-sidebar transition-[width] duration-200 ease-out motion-reduce:transition-none lg:block",
         collapsed ? "w-16" : "w-64",

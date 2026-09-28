@@ -45,11 +45,11 @@ export function YesNoToggle({
   );
 }
 
-/** Gemeinsamer Stil für Auswahl-Segmente: Türkis = ausgewählt (keine Gewinn/Verlust-Aussage). */
+/** Gemeinsamer Stil für Auswahl-Segmente: Akzentfarbe = ausgewählt (keine Gewinn/Verlust-Aussage). */
 export const segmentClass = (active: boolean) =>
   cn(
-    "inline-flex items-center justify-center gap-1.5 rounded-lg border text-sm font-semibold tracking-wide uppercase transition-colors outline-none focus-visible:ring-3 focus-visible:ring-profit/30",
+    "inline-flex items-center justify-center gap-1.5 rounded-lg border text-sm font-semibold tracking-wide uppercase transition-colors outline-none focus-visible:ring-3 focus-visible:ring-brand/30",
     active
-      ? "border-profit bg-profit/12 text-profit"
+      ? "border-brand bg-brand/12 text-brand"
       : "border-input bg-transparent text-muted-foreground hover:border-foreground/25 hover:text-foreground dark:bg-input/30",
   );

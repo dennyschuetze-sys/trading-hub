@@ -64,15 +64,15 @@ type FieldErrors = Partial<Record<"account_id" | "symbol" | "quantity" | "entry_
 const FORM_ID = "trade-form";
 const SECTIONS = { trade: "bereich-trade", execution: "bereich-ausfuehrung", setup: "bereich-setup", result: "bereich-ergebnis", review: "bereich-bewertung", notes: "bereich-notizen" };
 
-// Einheitliche Eingabefelder auf dieser Seite: gleiche Höhe, türkiser Fokus
+// Einheitliche Eingabefelder auf dieser Seite: gleiche Höhe, Fokus in der Akzentfarbe
 const CONTROL_STYLES =
-  "[&_[data-slot=input]]:h-10 [&_[data-slot=native-select]]:h-10 [&_[data-slot=input]:focus-visible]:border-profit [&_[data-slot=input]:focus-visible]:ring-profit/20 [&_[data-slot=native-select]:focus-visible]:border-profit [&_[data-slot=native-select]:focus-visible]:ring-profit/20 [&_[data-slot=textarea]:focus-visible]:border-profit [&_[data-slot=textarea]:focus-visible]:ring-profit/20";
+  "[&_[data-slot=input]]:h-10 [&_[data-slot=native-select]]:h-10 [&_[data-slot=input]:focus-visible]:border-brand [&_[data-slot=input]:focus-visible]:ring-brand/20 [&_[data-slot=native-select]:focus-visible]:border-brand [&_[data-slot=native-select]:focus-visible]:ring-brand/20 [&_[data-slot=textarea]:focus-visible]:border-brand [&_[data-slot=textarea]:focus-visible]:ring-brand/20";
 
 function FormCard({ id, number, title, description, children, className }: { id: string; number: string; title: string; description: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
     <Card id={id} className={cn("scroll-mt-32 gap-0 px-5 py-5 sm:px-6 sm:py-6", className)}>
       <div className="mb-5 flex items-start gap-3">
-        <span className="rounded-md bg-profit/12 px-1.5 py-1 text-xs leading-none font-semibold tracking-wider text-profit tabular-nums">{number}</span>
+        <span className="rounded-md bg-brand/12 px-1.5 py-1 text-xs leading-none font-semibold tracking-wider text-brand tabular-nums">{number}</span>
         <div>
           <h2 className="text-[0.8125rem] font-semibold tracking-[0.12em] uppercase">{title}</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
@@ -105,7 +105,7 @@ function F({
       <Label htmlFor={htmlFor} id={`${htmlFor}-label`}>
         {label}
         {required && (
-          <span className="text-profit" aria-hidden>
+          <span className="text-brand" aria-hidden>
             *
           </span>
         )}
@@ -128,10 +128,10 @@ const Eyebrow = ({ children }: { children: React.ReactNode }) => (
 
 function Computed({ label, value, hint, className }: { label: string; value: string; hint: string; className?: string }) {
   return (
-    <div className="grid content-start gap-1 bg-card px-4 py-3.5" style={{ backgroundImage: "linear-gradient(color-mix(in oklch, var(--profit) 5%, transparent), transparent)" }}>
+    <div className="grid content-start gap-1 bg-card px-4 py-3.5" style={{ backgroundImage: "linear-gradient(color-mix(in oklch, var(--brand) 5%, transparent), transparent)" }}>
       <p className="flex items-center gap-1.5 text-[0.6875rem] font-medium tracking-[0.08em] text-muted-foreground uppercase">
         {label}
-        <span className="rounded bg-profit/12 px-1 py-px text-[0.625rem] tracking-wider text-profit">Auto</span>
+        <span className="rounded bg-brand/12 px-1 py-px text-[0.625rem] tracking-wider text-brand">Auto</span>
       </p>
       <p className={cn("text-2xl font-semibold tabular-nums", value === "—" ? "text-muted-foreground" : className)}>{value}</p>
       <p className="text-xs text-muted-foreground">{hint}</p>
@@ -297,19 +297,19 @@ export function TradeForm({
       {/* Kopfbereich */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-semibold tracking-[0.14em] text-profit uppercase">{heading.eyebrow}</p>
+          <p className="text-xs font-semibold tracking-[0.14em] text-brand uppercase">{heading.eyebrow}</p>
           <h1 className="mt-0.5 text-2xl font-semibold tracking-tight sm:text-[1.75rem]">{heading.title}</h1>
           <p className="text-sm text-muted-foreground">{heading.description}</p>
         </div>
-        <Button type="submit" form={FORM_ID} disabled={busy} className="bg-profit text-background hover:bg-profit/90">
+        <Button type="submit" form={FORM_ID} disabled={busy} className="bg-brand text-background hover:bg-brand/90">
           {busy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
           {saveLabel}
         </Button>
       </div>
 
       {template && (
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-profit/30 bg-profit/5 px-3 py-2 text-sm">
-          <Copy className="size-4 text-profit" aria-hidden />
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm">
+          <Copy className="size-4 text-brand" aria-hidden />
           <span>
             Vorlage übernommen: <span className="font-medium">{template.label}</span> – Kurse, Zeiten und Ergebnis sind leer.
           </span>
@@ -455,7 +455,7 @@ export function TradeForm({
                     <span className="font-semibold text-foreground tabular-nums">{preview.plannedRR == null ? "—" : `1 : ${formatNumber(preview.plannedRR, 2)}`}</span>
                   </span>
                   {!t && lastStop != null && draft.entryPrice != null && draft.stopLoss == null && (
-                    <button type="button" onClick={applyLastStop} className="ml-auto inline-flex items-center gap-1 text-profit hover:underline">
+                    <button type="button" onClick={applyLastStop} className="ml-auto inline-flex items-center gap-1 text-brand hover:underline">
                       <Sparkles className="size-3.5" aria-hidden /> Letzten SL-Abstand übernehmen ({formatNumber(lastStop)})
                     </button>
                   )}
@@ -647,7 +647,7 @@ export function TradeForm({
               <Button variant="ghost" asChild>
                 <Link href={cancelHref}>Abbrechen</Link>
               </Button>
-              <Button type="submit" disabled={busy} className="bg-profit text-background hover:bg-profit/90">
+              <Button type="submit" disabled={busy} className="bg-brand text-background hover:bg-brand/90">
                 {busy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
                 {saveLabel}
               </Button>
@@ -670,7 +670,7 @@ export function TradeForm({
               <span className="text-sm font-semibold tabular-nums">{doc.percent} %</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-foreground/[0.06]" aria-hidden>
-              <div className="h-full rounded-full bg-profit transition-[width]" style={{ width: `${doc.percent}%` }} />
+              <div className="h-full rounded-full bg-brand transition-[width]" style={{ width: `${doc.percent}%` }} />
             </div>
             <p className="text-xs text-muted-foreground">
               {doc.missing.length ? `Offen: ${doc.missing.slice(0, 3).join(", ")}${doc.missing.length > 3 ? ` +${doc.missing.length - 3}` : ""}` : "Vollständig dokumentiert."}
@@ -690,7 +690,7 @@ export function TradeForm({
                   href={`/journal/new?vorlage=${quickActions.lastTrade.id}`}
                   className="flex items-center gap-2.5 rounded-lg bg-foreground/[0.04] px-3 py-2.5 text-sm transition-colors hover:bg-foreground/[0.07]"
                 >
-                  <Copy className="size-4 shrink-0 text-profit" aria-hidden />
+                  <Copy className="size-4 shrink-0 text-brand" aria-hidden />
                   <span className="min-w-0">
                     <span className="block font-medium">Letzten Trade als Vorlage</span>
                     <span className="block truncate text-xs text-muted-foreground">{quickActions.lastTrade.label}</span>

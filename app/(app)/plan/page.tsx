@@ -123,7 +123,7 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
       <div className="grid gap-7">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div className="grid gap-2">
-            <p className="text-[0.6875rem] font-semibold tracking-[0.14em] text-profit uppercase">Tagesplan</p>
+            <p className="text-[0.6875rem] font-semibold tracking-[0.14em] text-brand uppercase">Tagesplan</p>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{fullDate(date)}</h1>
             <div className="flex flex-wrap items-center gap-3">
               <span
@@ -162,16 +162,16 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
                   href={step.href}
                   className={cn(
                     "relative block overflow-hidden rounded-xl bg-card px-4 py-3 ring-1 ring-foreground/[0.07] transition-colors hover:ring-foreground/15",
-                    step.progress > 0 && step.progress < 1 && "ring-profit/25",
+                    step.progress > 0 && step.progress < 1 && "ring-brand/25",
                   )}
                 >
-                  <span className={cn("text-[0.6875rem] font-semibold tabular-nums", step.progress >= 1 ? "text-profit" : "text-muted-foreground/60")}>
+                  <span className={cn("text-[0.6875rem] font-semibold tabular-nums", step.progress >= 1 ? "text-brand" : "text-muted-foreground/60")}>
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <span className="block text-sm font-semibold">{step.title}</span>
                   <span className="block text-xs text-muted-foreground">{step.detail}</span>
                   <span className="absolute inset-x-0 bottom-0 h-0.5 bg-foreground/[0.06]" aria-hidden>
-                    <span className="block h-full bg-profit" style={{ width: `${Math.round(step.progress * 100)}%` }} />
+                    <span className="block h-full bg-brand" style={{ width: `${Math.round(step.progress * 100)}%` }} />
                   </span>
                 </a>
               </li>
@@ -242,7 +242,7 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
           <div className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-foreground/15 px-6 py-8 text-center">
             <LineChart className="size-5 text-muted-foreground/60" aria-hidden />
             <p className="text-sm font-medium">Keine Trades an diesem Tag</p>
-            <Link href="/journal/new" className="text-sm text-profit underline-offset-4 hover:underline">
+            <Link href="/journal/new" className="text-sm text-brand underline-offset-4 hover:underline">
               Trade erfassen
             </Link>
           </div>

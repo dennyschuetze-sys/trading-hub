@@ -29,7 +29,7 @@ export function UiScalePicker({ initial }: { initial: UiScale }) {
               className={cn(
                 "grid justify-items-center gap-1 rounded-lg border px-3 py-3 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 active
-                  ? "border-profit bg-profit/10 text-foreground"
+                  ? "border-brand bg-brand/10 text-foreground"
                   : "text-muted-foreground hover:border-foreground/30 hover:text-foreground",
               )}
             >

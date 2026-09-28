@@ -37,7 +37,7 @@ export function TagInput({
   const value = [...tags, draft.trim()].filter(Boolean).join(", ");
 
   return (
-    <div className="flex min-h-10 w-full flex-wrap items-center gap-1.5 rounded-lg border border-input px-2 py-1.5 transition-colors focus-within:border-profit focus-within:ring-3 focus-within:ring-profit/20 dark:bg-input/30">
+    <div className="flex min-h-10 w-full flex-wrap items-center gap-1.5 rounded-lg border border-input px-2 py-1.5 transition-colors focus-within:border-brand focus-within:ring-3 focus-within:ring-brand/20 dark:bg-input/30">
       <input type="hidden" name={name} value={value} />
       {tags.map((tag) => (
         <span key={tag} className="inline-flex h-6 items-center gap-1 rounded-md bg-foreground/[0.07] pr-1 pl-2 text-xs">

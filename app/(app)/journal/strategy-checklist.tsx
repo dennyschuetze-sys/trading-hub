@@ -157,7 +157,7 @@ export function StrategyChecklist({
                   value={item.id}
                   checked={checked.has(item.id)}
                   onChange={() => toggle(item.id)}
-                  className="mt-0.5 size-4 shrink-0 accent-[var(--profit)]"
+                  className="mt-0.5 size-4 shrink-0 accent-brand"
                 />
                 <span className={checked.has(item.id) ? undefined : "text-muted-foreground"}>{item.label}</span>
               </label>

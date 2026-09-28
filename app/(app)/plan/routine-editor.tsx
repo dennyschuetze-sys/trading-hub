@@ -26,7 +26,7 @@ export function RoutineEditor({ defaultItems }: { defaultItems: RoutineItem[] })
           <p className="text-2xl font-semibold tracking-tight tabular-nums">
             {done} <span className="text-sm font-medium text-muted-foreground">/ {total} erledigt</span>
           </p>
-          <span className={cn("text-xs font-semibold tabular-nums", done && done === total ? "text-profit" : "text-muted-foreground")}>
+          <span className={cn("text-xs font-semibold tabular-nums", done && done === total ? "text-brand" : "text-muted-foreground")}>
             {percent} %
           </span>
         </div>
@@ -38,7 +38,7 @@ export function RoutineEditor({ defaultItems }: { defaultItems: RoutineItem[] })
           aria-valuemax={total}
           aria-valuenow={done}
         >
-          <div className="h-full rounded-full bg-profit transition-[width] duration-300" style={{ width: `${percent}%` }} />
+          <div className="h-full rounded-full bg-brand transition-[width] duration-300" style={{ width: `${percent}%` }} />
         </div>
       </div>
 
@@ -53,7 +53,7 @@ export function RoutineEditor({ defaultItems }: { defaultItems: RoutineItem[] })
                 checked={row.done}
                 onChange={(e) => update(row.key, { done: e.target.checked })}
                 aria-label={row.label || `Punkt ${i + 1}`}
-                className="peer absolute inset-0 cursor-pointer appearance-none rounded-md border-[1.5px] border-foreground/25 transition-colors checked:border-profit checked:bg-profit focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="peer absolute inset-0 cursor-pointer appearance-none rounded-md border-[1.5px] border-foreground/25 transition-colors checked:border-brand checked:bg-brand focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               />
               <Check className="pointer-events-none relative size-3.5 text-background opacity-0 transition-opacity peer-checked:opacity-100" strokeWidth={3} aria-hidden />
             </label>

@@ -16,7 +16,7 @@ export function MobileNav() {
           <Menu className="size-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72 bg-sidebar p-4">
+      <SheetContent side="left" data-surface="sidebar" className="w-72 bg-sidebar p-4">
         <SheetTitle className="sr-only">Navigation</SheetTitle>
         <SidebarNav onNavigate={() => setOpen(false)} />
       </SheetContent>

@@ -26,7 +26,7 @@ export function ScalePicker({
         <span className="text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase" id={`${name}-label`}>
           {label}
         </span>
-        <span className={cn("text-xs", value ? "font-medium text-profit" : "text-muted-foreground")}>{value ? labels[value - 1] : "–"}</span>
+        <span className={cn("text-xs", value ? "font-medium text-brand" : "text-muted-foreground")}>{value ? labels[value - 1] : "–"}</span>
       </div>
       <input type="hidden" name={name} value={value ?? ""} />
       <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-labelledby={`${name}-label`}>
@@ -45,7 +45,7 @@ export function ScalePicker({
               className={cn(
                 "h-10 rounded-lg border text-sm font-semibold tabular-nums transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 active
-                  ? "border-profit bg-profit/15 text-profit shadow-[0_0_0_3px_color-mix(in_oklch,var(--profit)_12%,transparent)]"
+                  ? "border-brand bg-brand/15 text-brand shadow-[0_0_0_3px_color-mix(in_oklch,var(--brand)_12%,transparent)]"
                   : "border-input bg-background/40 text-muted-foreground hover:border-foreground/25 hover:text-foreground",
               )}
             >

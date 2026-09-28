@@ -39,7 +39,7 @@ export function SummaryHeadline({ draft, preview, currency }: { draft: TradeDraf
   return (
     <div className="flex min-w-0 items-center gap-2">
       <span className={cn("truncate text-xl font-semibold tracking-tight", !draft.symbol && "text-muted-foreground")}>{draft.symbol || "Symbol"}</span>
-      <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-profit/12 px-1.5 py-0.5 text-[0.6875rem] font-bold tracking-wider text-profit">
+      <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-brand/12 px-1.5 py-0.5 text-[0.6875rem] font-bold tracking-wider text-brand">
         <Arrow className="size-3" aria-hidden />
         {long ? "LONG" : "SHORT"}
       </span>
@@ -115,7 +115,7 @@ export function TradeSummary({
               {[1, 2, 3, 4, 5].map((n) => (
                 <Star
                   key={n}
-                  className={cn("size-3.5", draft.rating != null && n <= draft.rating ? "fill-profit text-profit" : "text-muted-foreground/30")}
+                  className={cn("size-3.5", draft.rating != null && n <= draft.rating ? "fill-brand text-brand" : "text-muted-foreground/30")}
                   aria-hidden
                 />
               ))}
