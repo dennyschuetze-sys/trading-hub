@@ -1,7 +1,8 @@
 /**
  * Farbschema der Oberfläche: feste Vorgaben oder zwei eigene Farben.
  * Aus Akzent- und Grundfarbe werden alle Töne für Hell und Dunkel abgeleitet (in OKLCH, damit Helligkeit
- * und Buntheit getrennt steuerbar sind). Gewinn, Verlust und Warnung bleiben bewusst unverändert.
+ * und Buntheit getrennt steuerbar sind). Gewinn und Verlust wählt man getrennt (lib/pnl-colors.ts), die
+ * Warnfarbe bleibt fest.
  */
 export const COLOR_THEME_COOKIE = "color-theme";
 
@@ -89,7 +90,7 @@ export function contrastRatio(a: Color, b: Color): number {
 }
 
 /** Hellt bzw. dunkelt `color` in kleinen Schritten, bis sie auf `background` mindestens `min` Kontrast hat. */
-function readableOn(color: Color, background: Color, min = 4.5): Color {
+export function readableOn(color: Color, background: Color, min = 4.5): Color {
   const step = background.l < 0.5 ? 0.01 : -0.01;
   let result = color;
   while (contrastRatio(result, background) < min && result.l > 0 && result.l < 1) {
@@ -100,27 +101,35 @@ function readableOn(color: Color, background: Color, min = 4.5): Color {
 
 const round = (v: number, digits: number) => Number(v.toFixed(digits));
 
-function toCss({ l, c, h, alpha }: Color): string {
+export function toCss({ l, c, h, alpha }: Color): string {
   const value = `${round(l, 3)} ${round(c, 3)} ${round(h, 1)}`;
   return alpha == null ? `oklch(${value})` : `oklch(${value} / ${alpha}%)`;
 }
 
 // ---------- Palette ----------
 
-const WHITE: Color = { l: 1, c: 0, h: 0 };
+export const WHITE: Color = { l: 1, c: 0, h: 0 };
 
-/** Farbtöne der festen Signalfarben aus globals.css – eine Akzentfarbe in deren Nähe wäre verwechselbar. */
-const SIGNAL_HUES = [
-  { hue: 26, label: "Verlust-Rot", meaning: "Verlusten" },
-  { hue: 182, label: "Gewinn-Türkis", meaning: "Gewinnen" },
-  { hue: 72, label: "Warn-Gelb", meaning: "Warnungen" },
-] as const;
+/** Abstand zweier Farbtöne auf dem Farbkreis (0–180°). */
+export const hueDistance = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
 
-/** Liegt die Akzentfarbe so nah an einer Signalfarbe, dass man sie verwechseln könnte? */
-export function signalConflict(accentHex: string): { label: string; meaning: string } | null {
+/** Farbton der festen Warnfarbe aus globals.css */
+const WARNING_HUE = 72;
+
+/**
+ * Liegt die Akzentfarbe so nah an einer Signalfarbe, dass man sie verwechseln könnte?
+ * `pnl` sind die gerade gewählten Gewinn- und Verlustfarben (Hex).
+ */
+export function signalConflict(accentHex: string, pnl: { profit: string; loss: string }): { label: string; meaning: string } | null {
   const { c, h } = hexToOklch(accentHex);
   if (c < 0.08) return null;
-  return SIGNAL_HUES.find(({ hue }) => Math.min(Math.abs(h - hue), 360 - Math.abs(h - hue)) < 25) ?? null;
+  const signals = [
+    { color: hexToOklch(pnl.loss), label: "der Verlustfarbe", meaning: "Verlusten" },
+    { color: hexToOklch(pnl.profit), label: "der Gewinnfarbe", meaning: "Gewinnen" },
+    { color: { l: 0.75, c: 0.15, h: WARNING_HUE }, label: "der Warnfarbe", meaning: "Warnungen" },
+  ];
+  const match = signals.find(({ color }) => color.c >= 0.08 && hueDistance(h, color.h) < 25);
+  return match ? { label: match.label, meaning: match.meaning } : null;
 }
 
 export type Palette = Record<string, Color>;

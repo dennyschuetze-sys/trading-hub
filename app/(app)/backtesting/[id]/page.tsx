@@ -290,7 +290,7 @@ export default async function BacktestSessionPage({ params }: PageProps<"/backte
                         )}
                       </span>
                     </TableCell>
-                    <TableCell className={t.direction === "long" ? "text-profit" : "text-loss"}>
+                    <TableCell className={t.direction === "long" ? "font-medium text-profit" : "font-medium text-loss"}>
                       {t.direction === "long" ? "Long" : "Short"}
                     </TableCell>
                     <TableCell>{t.setup_quality ?? "–"}</TableCell>

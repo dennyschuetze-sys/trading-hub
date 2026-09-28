@@ -13,7 +13,7 @@ export function StatTile({
   label: string;
   value: string;
   hint?: string;
-  /** Richtung: färbt den Wert in Türkis (Gewinn) bzw. gedämpftem Rot (Verlust) */
+  /** Richtung: färbt den Wert in der Gewinn- bzw. Verlustfarbe */
   tone?: "profit" | "loss" | null;
   /** „hero“ für die eine Kennzahl, die am stärksten hervorgehoben werden soll */
   size?: "default" | "hero";

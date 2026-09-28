@@ -15,8 +15,11 @@ import {
 } from "@/lib/color-theme";
 import { cn } from "@/lib/utils";
 
-/** Vorgaben oder zwei eigene Farben; wirkt sofort und wird pro Browser im Cookie gemerkt. */
-export function ColorThemePicker({ initial }: { initial: ColorTheme }) {
+/**
+ * Vorgaben oder zwei eigene Farben; wirkt sofort und wird pro Browser im Cookie gemerkt.
+ * `pnl`: aktuelle Gewinn-/Verlustfarben, damit eine eigene Akzentfarbe nicht mit ihnen verwechselt wird.
+ */
+export function ColorThemePicker({ initial, pnl }: { initial: ColorTheme; pnl: { profit: string; loss: string } }) {
   const [theme, setTheme] = useState<ColorTheme>(initial);
   // Eigene Farben bleiben erhalten, wenn man zwischendurch eine Vorgabe ausprobiert
   const [lastCustom, setLastCustom] = useState<ColorTheme | null>(initial.id === "custom" ? initial : null);
@@ -42,41 +45,45 @@ export function ColorThemePicker({ initial }: { initial: ColorTheme }) {
           </Option>
         ))}
         <Option label="Eigene" active={theme.id === "custom"} onSelect={() => theme.id !== "custom" && startCustom()}>
-          {lastCustom ? (
-            <Swatch accent={lastCustom.accent} base={lastCustom.base} />
-          ) : (
-            <span className="flex h-9 w-full items-center justify-center rounded-md border border-dashed" aria-hidden>
-              <span
-                className="size-4 rounded-full"
-                style={{ background: "conic-gradient(#ff4696, #ffb020, #39c3ae, #4c8dff, #a884ff, #ff4696)" }}
-              />
-            </span>
-          )}
+          {lastCustom ? <Swatch accent={lastCustom.accent} base={lastCustom.base} /> : <CustomPlaceholder />}
         </Option>
       </div>
 
-      {theme.id === "custom" && <CustomColors theme={theme} onChange={apply} />}
+      {theme.id === "custom" && <CustomColors theme={theme} pnl={pnl} onChange={apply} />}
 
       <p className="text-sm text-muted-foreground">
-        Gilt sofort für die ganze App und wird für diesen Browser gespeichert. Gewinn und Verlust behalten immer Türkis und Rot.
+        Gilt sofort für die ganze App und wird für diesen Browser gespeichert. Gewinn und Verlust stellst du darunter extra ein.
       </p>
     </div>
   );
 }
 
-/** Merkt die Wahl im Cookie (für den Server) und tauscht das Farb-CSS aus dem Layout sofort aus. */
-function persist(theme: ColorTheme) {
-  document.cookie = `${COLOR_THEME_COOKIE}=${serializeColorTheme(theme)}; path=/; max-age=31536000; samesite=lax`;
-  let style = document.getElementById("color-theme");
+/** Merkt die Wahl im Cookie (für den Server) und tauscht das CSS im `<style id>` aus dem Layout sofort aus. */
+export function persistStyle(cookie: string, value: string, styleId: string, css: string) {
+  document.cookie = `${cookie}=${value}; path=/; max-age=31536000; samesite=lax`;
+  let style = document.getElementById(styleId);
   if (!style) {
     style = document.createElement("style");
-    style.id = "color-theme";
+    style.id = styleId;
     document.head.append(style);
   }
-  style.textContent = colorThemeCss(theme);
+  style.textContent = css;
 }
 
-function Option({ label, active, onSelect, children }: { label: string; active: boolean; onSelect: () => void; children: React.ReactNode }) {
+function persist(theme: ColorTheme) {
+  persistStyle(COLOR_THEME_COOKIE, serializeColorTheme(theme), "color-theme", colorThemeCss(theme));
+}
+
+/** Platzhalter für „Eigene“, solange noch keine eigenen Farben gewählt wurden. */
+export function CustomPlaceholder() {
+  return (
+    <span className="flex h-9 w-full items-center justify-center rounded-md border border-dashed" aria-hidden>
+      <span className="size-4 rounded-full" style={{ background: "conic-gradient(#ff4696, #ffb020, #39c3ae, #4c8dff, #a884ff, #ff4696)" }} />
+    </span>
+  );
+}
+
+export function Option({ label, active, onSelect, children }: { label: string; active: boolean; onSelect: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
@@ -108,8 +115,16 @@ function Swatch({ accent, base }: { accent: string; base: string }) {
   );
 }
 
-function CustomColors({ theme, onChange }: { theme: ColorTheme; onChange: (next: ColorTheme) => void }) {
-  const conflict = signalConflict(theme.accent);
+function CustomColors({
+  theme,
+  pnl,
+  onChange,
+}: {
+  theme: ColorTheme;
+  pnl: { profit: string; loss: string };
+  onChange: (next: ColorTheme) => void;
+}) {
+  const conflict = signalConflict(theme.accent, pnl);
   const lightBase = hexToOklch(theme.base).l > 0.3;
 
   return (
@@ -128,7 +143,7 @@ function CustomColors({ theme, onChange }: { theme: ColorTheme; onChange: (next:
       />
       {conflict && (
         <p className="text-sm text-warning sm:col-span-2">
-          Die Akzentfarbe liegt nah am {conflict.label} – leicht mit {conflict.meaning} zu verwechseln.
+          Die Akzentfarbe liegt nah an {conflict.label} – leicht mit {conflict.meaning} zu verwechseln.
         </p>
       )}
       {lightBase && (
@@ -140,7 +155,7 @@ function CustomColors({ theme, onChange }: { theme: ColorTheme; onChange: (next:
   );
 }
 
-function ColorField({ label, hint, value, onChange }: { label: string; hint: string; value: string; onChange: (hex: string) => void }) {
+export function ColorField({ label, hint, value, onChange }: { label: string; hint: string; value: string; onChange: (hex: string) => void }) {
   const id = useId();
   // Beim Tippen zeigt das Feld den Entwurf; übernommen wird nur ein vollständiger Hex-Wert
   const [draft, setDraft] = useState<string | null>(null);

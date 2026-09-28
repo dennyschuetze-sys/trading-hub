@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { Bell, ChevronRight, Eye, Newspaper, Palette, ShieldAlert, Wallet } from "lucide-react";
+import { Bell, ChevronRight, Eye, Newspaper, ShieldAlert, Wallet } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { DEFAULT_PREFS } from "@/lib/notifications";
@@ -8,7 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import { telegramConfigured } from "@/lib/telegram";
 import { UI_SCALE_COOKIE, parseUiScale } from "@/lib/ui-scale";
 import { COLOR_THEME_COOKIE, parseColorTheme } from "@/lib/color-theme";
-import { ColorThemePicker } from "./color-theme-picker";
+import { PNL_COLORS_COOKIE, parsePnlColors } from "@/lib/pnl-colors";
+import { ColorSettings } from "./color-settings";
 import { NotificationPrefsForm } from "./notification-prefs-form";
 import { TelegramConnect } from "./telegram-connect";
 import { UiScalePicker } from "./ui-scale-picker";
@@ -27,6 +28,7 @@ export default async function SettingsPage() {
   const cookieStore = await cookies();
   const scale = parseUiScale(cookieStore.get(UI_SCALE_COOKIE)?.value);
   const colorTheme = parseColorTheme(cookieStore.get(COLOR_THEME_COOKIE)?.value);
+  const pnlColors = parsePnlColors(cookieStore.get(PNL_COLORS_COOKIE)?.value);
 
   return (
     <>
@@ -46,17 +48,7 @@ export default async function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="size-4" aria-hidden /> Farbschema
-              </CardTitle>
-              <CardDescription>Eine Vorgabe wählen oder zwei eigene Farben – die übrigen Töne für Hell und Dunkel werden daraus abgeleitet.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ColorThemePicker initial={colorTheme} />
-            </CardContent>
-          </Card>
+          <ColorSettings initialTheme={colorTheme} initialPnl={pnlColors} />
 
           <Card>
             <CardHeader>

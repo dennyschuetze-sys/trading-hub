@@ -165,7 +165,7 @@ export function JournalTable({ rows, strategies }: { rows: JournalRow[]; strateg
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className={t.direction === "long" ? "text-profit" : "text-loss"}>
+                  <TableCell className={t.direction === "long" ? "font-medium text-profit" : "font-medium text-loss"}>
                     {t.direction === "long" ? "Long" : "Short"}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">{t.accountName}</TableCell>

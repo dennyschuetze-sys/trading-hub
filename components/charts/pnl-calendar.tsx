@@ -30,7 +30,7 @@ function cellAmount(value: number, currency: string) {
 }
 
 /**
- * Monatskalender der Tagesergebnisse. Die Farbe (Türkis/Rot, Deckkraft nach Betrag) zeigt die Richtung,
+ * Monatskalender der Tagesergebnisse. Die Farbe (Gewinn/Verlust, Deckkraft nach Betrag) zeigt die Richtung,
  * der Betrag steht immer mit Vorzeichen als Text in der Zelle – Farbe ist nie die einzige Information.
  */
 export function PnlCalendar({ days, currency, initialMonth }: { days: DayResult[]; currency: string; initialMonth?: string }) {

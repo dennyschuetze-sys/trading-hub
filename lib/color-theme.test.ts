@@ -115,15 +115,24 @@ describe("colorThemeCss", () => {
 });
 
 describe("signalConflict", () => {
+  const greenRed = { profit: "#4bcb71", loss: "#ff0000" };
+
   it("warnt, wenn der Akzent wie Gewinn, Verlust oder Warnung aussieht", () => {
-    expect(signalConflict("#ff0000")?.label).toBe("Verlust-Rot");
-    expect(signalConflict("#20c9b0")?.label).toBe("Gewinn-Türkis");
-    expect(signalConflict("#f5b000")?.label).toBe("Warn-Gelb");
+    expect(signalConflict("#ff0000", greenRed)?.label).toBe("der Verlustfarbe");
+    expect(signalConflict("#3ddc84", greenRed)?.label).toBe("der Gewinnfarbe");
+    expect(signalConflict("#f5b000", greenRed)?.label).toBe("der Warnfarbe");
+  });
+
+  it("richtet sich nach den gewählten Gewinn-/Verlustfarben", () => {
+    expect(signalConflict("#4c8dff", greenRed)).toBeNull();
+    expect(signalConflict("#4c8dff", { profit: "#4c99f8", loss: "#fc6b33" })?.label).toBe("der Gewinnfarbe");
+    // graue eigene Gewinnfarbe: kein Farbton, der sich verwechseln ließe
+    expect(signalConflict("#4c8dff", { profit: "#8a8f98", loss: "#ff0000" })).toBeNull();
   });
 
   it("lässt deutlich andere und graue Töne durch", () => {
-    expect(signalConflict("#ff4696")).toBeNull();
-    expect(signalConflict("#4c8dff")).toBeNull();
-    expect(signalConflict("#888888")).toBeNull();
+    expect(signalConflict("#ff4696", greenRed)).toBeNull();
+    expect(signalConflict("#a884ff", greenRed)).toBeNull();
+    expect(signalConflict("#888888", greenRed)).toBeNull();
   });
 });

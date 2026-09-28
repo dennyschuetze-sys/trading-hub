@@ -149,7 +149,7 @@ export default async function GalleryPage({ searchParams }: PageProps<"/backtest
                       <CardContent className="flex items-center justify-between gap-2 px-4 py-3 text-sm">
                         <span className="min-w-0">
                           <span className="font-medium">{trade.symbol}</span>{" "}
-                          <span className={trade.direction === "long" ? "text-profit" : "text-loss"}>
+                          <span className={trade.direction === "long" ? "font-medium text-profit" : "font-medium text-loss"}>
                             {trade.direction === "long" ? "Long" : "Short"}
                           </span>
                           <span className="block truncate text-xs text-muted-foreground">

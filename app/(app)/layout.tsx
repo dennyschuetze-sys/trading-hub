@@ -7,6 +7,7 @@ import { DesktopSidebar, SidebarProvider, SidebarToggle } from "@/components/lay
 import { SIDEBAR_COOKIE } from "@/lib/navigation";
 import { UI_SCALE_COOKIE, parseUiScale } from "@/lib/ui-scale";
 import { COLOR_THEME_COOKIE, colorThemeCss, parseColorTheme } from "@/lib/color-theme";
+import { PNL_COLORS_COOKIE, parsePnlColors, pnlColorsCss } from "@/lib/pnl-colors";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
 
@@ -17,6 +18,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const collapsed = cookieStore.get(SIDEBAR_COOKIE)?.value === "collapsed";
   const scale = parseUiScale(cookieStore.get(UI_SCALE_COOKIE)?.value);
   const colorTheme = parseColorTheme(cookieStore.get(COLOR_THEME_COOKIE)?.value);
+  const pnlColors = parsePnlColors(cookieStore.get(PNL_COLORS_COOKIE)?.value);
 
   return (
     <SidebarProvider initialCollapsed={collapsed}>
@@ -24,6 +26,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       {scale !== 100 && <style>{`html{font-size:${scale}%}`}</style>}
       {/* Farbschema aus den Einstellungen; die Auswahl dort tauscht den Inhalt direkt aus */}
       <style id="color-theme">{colorThemeCss(colorTheme)}</style>
+      <style id="pnl-colors">{pnlColorsCss(pnlColors)}</style>
       <div className="flex min-h-screen">
         <a
           href="#main"

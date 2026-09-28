@@ -79,7 +79,7 @@ describe("classifyBias", () => {
     expect(classifyBias(null, 0).key).toBe("neutral");
   });
 
-  it("färbt bullisch türkis und bärisch rot", () => {
+  it("färbt bullisch in der Gewinn- und bärisch in der Verlustfarbe", () => {
     expect(classifyBias(92, 1).tone).toBe("profit");
     expect(classifyBias(8, -1).tone).toBe("loss");
     expect(classifyBias(50, 1).tone).toBeNull();

@@ -225,7 +225,7 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
                 <Link href={`/journal/${t.id}`} className="flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-foreground/[0.03]">
                   <span className="min-w-0">
                     <span className="font-semibold">{t.symbol}</span>{" "}
-                    <span className={t.direction === "long" ? "text-profit" : "text-loss"}>{t.direction === "long" ? "Long" : "Short"}</span>
+                    <span className={t.direction === "long" ? "font-medium text-profit" : "font-medium text-loss"}>{t.direction === "long" ? "Long" : "Short"}</span>
                     <span className="block truncate text-xs text-muted-foreground">
                       {formatDateTime(t.entry_time)} · {t.accounts?.name}
                       {t.strategy_id ? ` · ${strategyName.get(t.strategy_id) ?? "Strategie"}` : " · ohne Strategie"}

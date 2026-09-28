@@ -157,7 +157,7 @@ function TradeInfo({ item, className }: { item: ScreenshotItem; className?: stri
     <div className={cn("flex items-center justify-between gap-3 text-sm", className)}>
       <span className="min-w-0">
         <span className="font-medium">{item.symbol}</span>{" "}
-        <span className={item.direction === "long" ? "text-profit" : "text-loss"}>{item.direction === "long" ? "Long" : "Short"}</span>
+        <span className={item.direction === "long" ? "font-medium text-profit" : "font-medium text-loss"}>{item.direction === "long" ? "Long" : "Short"}</span>
         <span className="block truncate text-xs text-muted-foreground">{[item.date, item.context].filter(Boolean).join(" · ")}</span>
       </span>
       <span className="shrink-0 text-right tabular-nums">

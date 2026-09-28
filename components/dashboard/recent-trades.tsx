@@ -39,7 +39,7 @@ export function RecentTradesCard({ trades }: { trades: RecentTrade[] }) {
                   <span
                     className={cn(
                       "w-14 shrink-0 rounded-md py-0.5 text-center text-[0.65625rem] font-bold tracking-wider",
-                      t.direction === "long" ? "bg-profit/15 text-profit" : "bg-loss/15 text-loss",
+                      t.direction === "long" ? "bg-profit/20 text-profit" : "bg-loss/20 text-loss",
                     )}
                   >
                     {t.direction === "long" ? "LONG" : "SHORT"}

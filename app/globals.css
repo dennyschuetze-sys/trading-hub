@@ -80,14 +80,15 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  /* Gewinn/Verlust: Türkis statt Grün, damit das Paar auch bei Rot-Grün-Schwäche unterscheidbar bleibt
-     (geprüft mit dem Palette-Validator: CVD ΔE 14,3 hell / 12,0 dunkel) */
-  --profit: oklch(0.64 0.12 185);
-  --loss: oklch(0.55 0.21 25);
+  /* Gewinn/Verlust: klassisch Grün und Rot, als Schrift auf Weiß lesbar (≥ 4,5 : 1). Andere Paare – auch für
+     Rot-Grün-Schwäche – wählt man in den Einstellungen (lib/pnl-colors.ts) */
+  --profit: oklch(0.537 0.145 150);
+  /* Reinrot, für Lesbarkeit auf Weiß minimal abgedunkelt (#ff0000 hätte nur 4,0 : 1) */
+  --loss: #ec0000;
   --warning: oklch(0.72 0.16 70);
-  /* Akzent für Auswahl, Fokus und Fortschritt – im Standard-Schema die Gewinnfarbe (auch im Dunkelmodus),
-     Farbschemata setzen einen eigenen, lesbaren Wert */
-  --brand: var(--profit);
+  /* Akzent für Auswahl, Fokus und Fortschritt – im Standard-Schema Türkis, Farbschemata setzen einen eigenen,
+     lesbaren Wert */
+  --brand: oklch(0.64 0.12 185);
   --chart-line: oklch(0.6 0.11 185);
   --chart-grid: #e1e0d9;
   --chart-axis: #898781;
@@ -127,10 +128,11 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --profit: oklch(0.74 0.12 180);
-  /* gedämpftes Rot – deutlich, aber nicht grell */
-  --loss: oklch(0.66 0.14 27);
+  --profit: oklch(0.75 0.17 150);
+  /* klassisches Reinrot */
+  --loss: #ff0000;
   --warning: oklch(0.78 0.11 75);
+  --brand: oklch(0.74 0.12 180);
   --chart-line: oklch(0.74 0.12 180);
   --chart-grid: oklch(1 0 0 / 6%);
   --chart-axis: oklch(0.55 0.008 260);

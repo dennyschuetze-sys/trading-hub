@@ -154,7 +154,7 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
           </Link>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">{trade.symbol}</h1>
-            <Badge className={trade.direction === "long" ? "bg-profit/15 text-profit" : "bg-loss/15 text-loss"}>
+            <Badge className={trade.direction === "long" ? "bg-profit/20 text-profit" : "bg-loss/20 text-loss"}>
               {trade.direction === "long" ? "Long" : "Short"}
             </Badge>
             {trade.status === "open" && <Badge variant="outline">Offen</Badge>}

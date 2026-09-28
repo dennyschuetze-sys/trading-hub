@@ -305,7 +305,7 @@ export function ImportWizard({ accounts }: { accounts: AccountOption[] }) {
                         <TableRow key={t.externalId} className={duplicate ? "opacity-50" : ""}>
                           <TableCell className="whitespace-nowrap tabular-nums">{formatDateTime(rows[i].entry_time)}</TableCell>
                           <TableCell className="font-medium">{t.symbol}</TableCell>
-                          <TableCell className={t.direction === "long" ? "text-profit" : "text-loss"}>
+                          <TableCell className={t.direction === "long" ? "font-medium text-profit" : "font-medium text-loss"}>
                             {t.direction === "long" ? "Long" : "Short"}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">{t.quantity}</TableCell>

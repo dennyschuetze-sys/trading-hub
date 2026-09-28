@@ -7,7 +7,7 @@ import { formatMoney, formatR } from "@/lib/trading";
 const MIN_SPAN = 12;
 
 /**
- * Netto P&L je Einstiegsstunde als Heatmap (Türkis = Gewinn, Rot = Verlust, Deckkraft nach Betrag).
+ * Netto P&L je Einstiegsstunde als Heatmap (Gewinn- bzw. Verlustfarbe, Deckkraft nach Betrag).
  * Gezeigt wird der Bereich von der ersten bis zur letzten gehandelten Stunde (mind. 12 Stunden); Details im Tooltip.
  */
 export function HourHeatmap({ rows, currency }: { rows: BreakdownRow[]; currency: string }) {
