@@ -196,6 +196,14 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
             <Badge className={trade.direction === "long" ? "bg-profit/20 text-profit" : "bg-loss/20 text-loss"}>
               {trade.direction === "long" ? "Long" : "Short"}
             </Badge>
+            {trade.net_pnl != null && (
+              <span className="flex items-baseline gap-2">
+                <span className={cn("text-xl font-semibold tabular-nums", pnlClass(trade.net_pnl))}>{money(trade.net_pnl, true)}</span>
+                {trade.r_multiple != null && (
+                  <span className={cn("text-sm tabular-nums", pnlClass(trade.r_multiple))}>{formatR(trade.r_multiple)}</span>
+                )}
+              </span>
+            )}
             {trade.status === "open" && <Badge variant="outline">Offen</Badge>}
             {isRevenge && (
               <Badge variant="outline" className="border-loss/50" title={`Eröffnet ≤ ${REVENGE_MINUTES} Min. nach einem Verlust`}>
@@ -223,11 +231,6 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
             </Button>
             <TradeMenu onDelete={deleteTrade.bind(null, trade.id)} />
           </div>
-        </div>
-
-        <div className="flex items-baseline gap-3">
-          <span className={cn("text-4xl font-semibold tracking-tight tabular-nums", pnlClass(trade.net_pnl))}>{money(trade.net_pnl, true)}</span>
-          <span className={cn("tabular-nums", pnlClass(trade.r_multiple))}>{formatR(trade.r_multiple)}</span>
         </div>
 
         <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
