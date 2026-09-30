@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Copy, FlaskConical, Pencil, ShieldAlert, XCircle } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle2, Clock, Copy, FlaskConical, Link2, Pencil, ShieldAlert, Star, Timer, Wallet, XCircle, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DeleteButton } from "@/components/forms/delete-button";
+import { shortDate } from "@/components/charts/format";
 import {
   costsInR,
   exitEfficiency,
@@ -24,16 +24,20 @@ import {
   HTF_BIASES,
   MARKET_CONTEXTS,
   SESSIONS,
+  TIME_ZONE,
   dayBoundary,
-  formatDateTime,
+  formatDate,
   formatMoney,
   formatNumber,
   formatR,
   labelFor,
   pnlClass,
 } from "@/lib/trading";
+import { cn } from "@/lib/utils";
 import { deleteTrade } from "../actions";
+import { formatDuration } from "../trade-summary";
 import { Screenshots } from "./screenshots";
+import { TradeMenu } from "./trade-menu";
 
 export default async function TradeDetailPage({ params }: PageProps<"/journal/[id]">) {
   const { id } = await params;
@@ -106,52 +110,87 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
   const yesNo = (v: boolean | null) => (v == null ? "–" : v ? "Ja" : "Nein");
   const rValue = (v: number | null) => (v == null ? "–" : `${formatNumber(v, 2)} R`);
 
-  const details: [string, React.ReactNode][] = [
-    session ? ["Backtest", session.name] : ["Account", trade.accounts?.name],
-    ["Einstieg", formatDateTime(trade.entry_time)],
-    ["Ausstieg", formatDateTime(trade.exit_time)],
+  // Kopfzeile: Account, Datum, Uhrzeit (Berliner Zeit), Haltedauer, geplantes CRV
+  const clock = (iso: string) =>
+    new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: TIME_ZONE }).format(new Date(iso));
+  const exitTime = trade.exit_time;
+  const timeRange = exitTime
+    ? `${clock(trade.entry_time)} – ${berlinParts(exitTime).date === day ? clock(exitTime) : `${shortDate(exitTime)} ${clock(exitTime)}`}`
+    : `${clock(trade.entry_time)} – offen`;
+  const holdMinutes = exitTime ? Math.round((Date.parse(exitTime) - Date.parse(trade.entry_time)) / 60000) : null;
+  const meta: { icon: LucideIcon; label: string; text: string }[] = [
+    { icon: Wallet, label: session ? "Backtest" : "Account", text: session ? session.name : (trade.accounts?.name ?? "–") },
+    { icon: Calendar, label: "Einstiegstag", text: formatDate(trade.entry_time) },
+    { icon: Clock, label: "Uhrzeit (Berliner Zeit)", text: timeRange },
+    ...(holdMinutes != null ? [{ icon: Timer, label: "Haltedauer", text: formatDuration(holdMinutes) ?? "–" }] : []),
+    ...(plannedRR != null ? [{ icon: Link2, label: "Geplantes CRV", text: `CRV 1:${formatNumber(plannedRR, 2)}` }] : []),
+  ];
+
+  const execution: [string, React.ReactNode][] = [
     [isFutures ? "Kontrakte" : "Lots", formatNumber(trade.quantity, 4)],
     ["Einstiegskurs", formatNumber(trade.entry_price)],
     ["Ausstiegskurs", formatNumber(trade.exit_price)],
     ["Stop Loss", formatNumber(trade.stop_loss)],
     ["Take Profit", formatNumber(trade.take_profit)],
     ["SL-Größe", formatStopSize(stop) ?? "–"],
-    ["Geplantes CRV", plannedRR == null ? "–" : `1 : ${formatNumber(plannedRR)}`],
-    ["Bester Kurs", formatNumber(trade.best_price)],
-    ["Schlechtester Kurs", formatNumber(trade.worst_price)],
-    ["Max. mögliches R", rValue(mfe)],
-    ["Max. Gegenlauf", rValue(mae)],
-    ["Exit-Effizienz", efficiency == null ? "–" : `${formatNumber(efficiency * 100, 0)} %`],
     ["Ausstiegsart", exit ? { sl: "Am Stop Loss", tp: "Am Take Profit", manual: "Manuell" }[exit] : "–"],
-    ["SL auf Breakeven", yesNo(trade.moved_to_breakeven)],
-    ["Teilgewinne", yesNo(trade.partial_close)],
-    ["P&L brutto", money(trade.pnl, true)],
-    ["Kommission", money(trade.commission)],
-    ["Swap", money(trade.swap)],
-    ["Kosten in R", rValue(costs)],
-    ["Risiko", money(trade.risk_amount)],
-    ["Session", labelFor(SESSIONS, trade.session)],
-    ...(tradeNo ? ([["Trade am Tag", `${tradeNo}. Trade`]] as [string, React.ReactNode][]) : []),
+  ];
+  const setup: [string, React.ReactNode][] = [
     ["Einstiegskriterium", trade.entry_criterion ?? "–"],
     ["Timeframe", trade.entry_timeframe ?? "–"],
     ["HTF-Trend", labelFor(HTF_BIASES, trade.htf_bias)],
     ["Marktkontext", labelFor(MARKET_CONTEXTS, trade.market_context)],
     ["Setup-Qualität", trade.setup_quality ?? "–"],
+  ];
+  const evaluation: [string, React.ReactNode][] = [
+    ["Session", labelFor(SESSIONS, trade.session)],
+    ...(tradeNo ? ([["Trade am Tag", `${tradeNo}. Trade`]] as [string, React.ReactNode][]) : []),
+    ["SL auf Breakeven", yesNo(trade.moved_to_breakeven)],
+    ["Teilgewinne", yesNo(trade.partial_close)],
+  ];
+  const moreFigures: [string, React.ReactNode][] = [
+    ["Bester Kurs", formatNumber(trade.best_price)],
+    ["Schlechtester Kurs", formatNumber(trade.worst_price)],
+    ["Max. mögliches R", rValue(mfe)],
+    ["Max. Gegenlauf", rValue(mae)],
+    ["Exit-Effizienz", efficiency == null ? "–" : `${formatNumber(efficiency * 100, 0)} %`],
+  ];
+  const costRows: [string, React.ReactNode][] = [
+    ["P&L brutto", money(trade.pnl, true)],
+    ["Kommission", money(trade.commission)],
+    ["Swap", money(trade.swap)],
+    ["Kosten in R", rValue(costs)],
+    ["Risiko", money(trade.risk_amount)],
+  ];
+  const rating = trade.rating;
+  const review: [string, React.ReactNode][] = [
+    ["Plan eingehalten", yesNo(trade.followed_plan)],
     ["Emotion", trade.emotion ?? "–"],
-    ["Plan eingehalten", trade.followed_plan == null ? "–" : trade.followed_plan ? "Ja" : "Nein"],
-    ["Bewertung", trade.rating ? "★".repeat(trade.rating) : "–"],
+    [
+      "Bewertung",
+      rating ? (
+        <span className="inline-flex gap-0.5 align-middle" role="img" aria-label={`${rating} von 5 Sternen`}>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Star key={n} className={cn("size-4", n <= rating ? "fill-foreground text-foreground" : "text-muted-foreground/40")} aria-hidden />
+          ))}
+        </span>
+      ) : (
+        "–"
+      ),
+    ],
   ];
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="grid gap-2">
-          <Link
-            href={session ? `/backtesting/${session.id}` : "/journal"}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" /> {session ? session.name : "Journal"}
-          </Link>
+      <header className="grid gap-3">
+        <Link
+          href={session ? `/backtesting/${session.id}` : "/journal"}
+          className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" /> {session ? session.name : "Journal"}
+        </Link>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">{trade.symbol}</h1>
             <Badge className={trade.direction === "long" ? "bg-profit/20 text-profit" : "bg-loss/20 text-loss"}>
@@ -169,72 +208,47 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
               </Badge>
             )}
           </div>
-          <div className="flex items-baseline gap-3">
-            <span className={`text-3xl font-semibold tabular-nums ${pnlClass(trade.net_pnl)}`}>
-              {money(trade.net_pnl, true)}
-            </span>
-            <span className={`tabular-nums ${pnlClass(trade.r_multiple)}`}>{formatR(trade.r_multiple)}</span>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {!session && (
-            <Button variant="ghost" asChild>
-              <Link href={`/journal/new?vorlage=${trade.id}`} title="Neuen Trade mit Account, Symbol, Setup, Risiko und Tags dieses Trades anlegen">
-                <Copy className="size-4" /> Als Vorlage
+          <div className="flex items-center gap-2">
+            {!session && (
+              <Button variant="outline" asChild>
+                <Link href={`/journal/new?vorlage=${trade.id}`} title="Neuen Trade mit Account, Symbol, Setup, Risiko und Tags dieses Trades anlegen">
+                  <Copy className="size-4" /> Als Vorlage
+                </Link>
+              </Button>
+            )}
+            <Button variant="outline" asChild>
+              <Link href={`/journal/${trade.id}/edit`}>
+                <Pencil className="size-4" /> Bearbeiten
               </Link>
             </Button>
-          )}
-          <Button variant="outline" asChild>
-            <Link href={`/journal/${trade.id}/edit`}>
-              <Pencil className="size-4" /> Bearbeiten
-            </Link>
-          </Button>
-          <DeleteButton
-            title="Trade löschen?"
-            description="Der Trade und seine Screenshots werden endgültig gelöscht."
-            onConfirm={deleteTrade.bind(null, trade.id)}
-          />
+            <TradeMenu onDelete={deleteTrade.bind(null, trade.id)} />
+          </div>
         </div>
-      </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
-        <div className="grid content-start gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Screenshots</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Screenshots tradeId={trade.id} userId={auth.user.id} screenshots={screenshots} />
-            </CardContent>
-          </Card>
-
-          {(trade.notes || trade.lessons) && (
-            <div className="grid gap-6 md:grid-cols-2">
-              {[
-                ["Notizen", trade.notes],
-                ["Lessons Learned", trade.lessons],
-              ].map(
-                ([title, body]) =>
-                  body && (
-                    <Card key={title}>
-                      <CardHeader>
-                        <CardTitle>{title}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm whitespace-pre-wrap">{body}</p>
-                      </CardContent>
-                    </Card>
-                  ),
-              )}
-            </div>
-          )}
+        <div className="flex items-baseline gap-3">
+          <span className={cn("text-4xl font-semibold tracking-tight tabular-nums", pnlClass(trade.net_pnl))}>{money(trade.net_pnl, true)}</span>
+          <span className={cn("tabular-nums", pnlClass(trade.r_multiple))}>{formatR(trade.r_multiple)}</span>
         </div>
+
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          {meta.map(({ icon: Icon, label, text }, i) => (
+            <li key={label} className={cn("flex items-center gap-2", i > 0 && "sm:border-l sm:pl-4")} title={label}>
+              <Icon className="size-4 text-muted-foreground" aria-hidden />
+              <span className="sr-only">{label}: </span>
+              {text}
+            </li>
+          ))}
+        </ul>
+      </header>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <Screenshots tradeId={trade.id} userId={auth.user.id} screenshots={screenshots} />
 
         <div className="grid content-start gap-6">
           {tradeViolations.length > 0 && (
-            <Card className="gap-3 border-loss/50">
+            <Card className="gap-3 border-loss/50 [--card-spacing:--spacing(5)]">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <ShieldAlert className="size-4 text-loss" aria-hidden /> Regelverstoß
                 </CardTitle>
               </CardHeader>
@@ -254,13 +268,13 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
             </Card>
           )}
 
-          <Card>
+          <Card className="[--card-spacing:--spacing(5)]">
             <CardHeader>
-              <CardTitle>Strategie</CardTitle>
+              <CardTitle className="text-lg font-semibold">Strategie</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 text-sm">
               {trade.strategies ? (
-                <Link href={`/strategies/${trade.strategies.id}`} className="font-medium underline underline-offset-4">
+                <Link href={`/strategies/${trade.strategies.id}`} className="w-fit font-medium underline underline-offset-4">
                   {trade.strategies.name}
                 </Link>
               ) : (
@@ -293,54 +307,100 @@ export default async function TradeDetailPage({ params }: PageProps<"/journal/[i
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="[--card-spacing:--spacing(5)]">
             <CardHeader>
-              <CardTitle>Details</CardTitle>
+              <CardTitle className="text-lg font-semibold">Ausführung</CardTitle>
             </CardHeader>
             <CardContent>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                {details.map(([label, value]) => (
-                  <div key={label} className="contents">
-                    <dt className="text-muted-foreground">{label}</dt>
-                    <dd className="text-right tabular-nums">{value ?? "–"}</dd>
-                  </div>
-                ))}
-              </dl>
+              <Rows rows={execution} />
             </CardContent>
           </Card>
 
-          {(trade.mistakes.length > 0 || trade.tags.length > 0) && (
-            <Card>
-              <CardContent className="grid gap-4">
-                {trade.mistakes.length > 0 && (
-                  <div className="grid gap-2">
-                    <p className="text-sm text-muted-foreground">Fehler</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {trade.mistakes.map((m) => (
-                        <Badge key={m} variant="outline" className="border-loss/50">
-                          {m}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {trade.tags.length > 0 && (
-                  <div className="grid gap-2">
-                    <p className="text-sm text-muted-foreground">Tags</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {trade.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          <Card className="[--card-spacing:--spacing(5)]">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Setup</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Rows rows={setup} />
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      <Card className="[--card-spacing:--spacing(5)]">
+        <CardHeader className="border-b">
+          <CardTitle className="text-lg font-semibold">Trade-Review</CardTitle>
+        </CardHeader>
+        {/* Vier Spalten nebeneinander (ab xl), darunter 2 × 2, auf dem Handy untereinander */}
+        <CardContent className="grid gap-6 md:grid-cols-2 md:gap-x-0 xl:grid-cols-4">
+          <section className="grid content-start gap-3 md:pr-6">
+            <h3 className="font-semibold">Notizen</h3>
+            {trade.notes ? (
+              <p className="text-sm whitespace-pre-wrap">{trade.notes}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Noch keine Notizen.</p>
+            )}
+            {(trade.mistakes.length > 0 || trade.tags.length > 0) && (
+              <ul className="flex flex-wrap gap-2" aria-label="Fehler und Tags">
+                {trade.mistakes.map((m) => (
+                  <li key={`fehler-${m}`}>
+                    <Badge variant="outline" className="h-auto rounded-full border-loss/60 px-3 py-1 text-xs" title="Fehler">
+                      {m}
+                    </Badge>
+                  </li>
+                ))}
+                {trade.tags.map((tag) => (
+                  <li key={`tag-${tag}`}>
+                    <Badge variant="secondary" className="h-auto rounded-full px-3 py-1 text-xs" title="Tag">
+                      {tag}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          <section className="grid content-start gap-3 md:border-l md:pl-6 xl:pr-6">
+            <h3 className="font-semibold">Lessons Learned</h3>
+            {trade.lessons ? (
+              <p className="text-sm whitespace-pre-wrap">{trade.lessons}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Noch keine Lessons Learned.</p>
+            )}
+            <Rows rows={review} />
+          </section>
+          <section className="grid content-start gap-3 md:pr-6 xl:border-l xl:pl-6">
+            <h3 className="font-semibold">Auswertung</h3>
+            <Rows rows={evaluation} />
+            <details className="group text-sm">
+              <summary className="w-fit cursor-pointer list-none text-brand underline underline-offset-4 [&::-webkit-details-marker]:hidden">
+                <span className="group-open:hidden">Weitere Kennzahlen</span>
+                <span className="hidden group-open:inline">Weniger anzeigen</span>
+              </summary>
+              <div className="mt-3">
+                <Rows rows={moreFigures} />
+              </div>
+            </details>
+          </section>
+          <section className="grid content-start gap-3 md:border-l md:pl-6">
+            <h3 className="font-semibold">Kosten</h3>
+            <Rows rows={costRows} />
+          </section>
+        </CardContent>
+      </Card>
     </div>
+  );
+}
+
+/** Beschriftung links, Wert rechts – die Zeilen aller Kennzahlen-Blöcke. */
+function Rows({ rows }: { rows: [string, React.ReactNode][] }) {
+  return (
+    <dl className="grid gap-2.5 text-sm">
+      {rows.map(([label, value]) => (
+        <div key={label} className="flex items-baseline justify-between gap-4">
+          <dt className="text-muted-foreground">{label}</dt>
+          <dd className="text-right tabular-nums">{value ?? "–"}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

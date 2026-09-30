@@ -12,30 +12,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 
-export function DeleteButton({
-  title,
-  description,
-  onConfirm,
-}: {
+type DeleteDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
   onConfirm: () => Promise<void>;
-}) {
-  const [open, setOpen] = useState(false);
+};
+
+/** Sicherheitsabfrage vor dem Löschen – auch für Auslöser, die nicht selbst ein Knopf sind (z. B. ein Menüeintrag). */
+export function DeleteDialog({ open, onOpenChange, title, description, onConfirm }: DeleteDialogProps) {
   const [pending, startTransition] = useTransition();
 
   return (
-    <AlertDialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
-      <AlertDialogTrigger asChild>
-        <Button variant="outline" disabled={pending}>
-          <Trash2 className="size-4" />
-          Löschen
-        </Button>
-      </AlertDialogTrigger>
+    <AlertDialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
@@ -52,7 +45,7 @@ export function DeleteButton({
               startTransition(async () => {
                 try {
                   await onConfirm();
-                  setOpen(false);
+                  onOpenChange(false);
                 } catch {
                   toast.error("Löschen fehlgeschlagen. Bitte versuche es erneut.");
                 }
@@ -65,5 +58,19 @@ export function DeleteButton({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+}
+
+export function DeleteButton(props: Pick<DeleteDialogProps, "title" | "description" | "onConfirm">) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button variant="outline" onClick={() => setOpen(true)}>
+        <Trash2 className="size-4" />
+        Löschen
+      </Button>
+      <DeleteDialog open={open} onOpenChange={setOpen} {...props} />
+    </>
   );
 }
