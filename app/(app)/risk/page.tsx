@@ -26,14 +26,16 @@ export default async function RiskPage() {
     getNewsSettings(supabase),
     getFxRates(),
   ]);
-  await rememberEvents(supabase, calendar.events);
 
   const list = accounts ?? [];
   const now = new Date();
   const { rows, lock } = buildRiskToday(list, trades, rules, calendar.events, newsSettings.calendarCurrencies, now);
 
   const since = new Date(now.getTime() - 30 * 24 * 3600_000).toISOString();
-  const { violations } = await loadViolations(supabase, { entryFrom: since }, { trades, rules });
+  const [{ violations }] = await Promise.all([
+    loadViolations(supabase, { entryFrom: since }, { trades, rules }),
+    rememberEvents(supabase, calendar.events),
+  ]);
   const recent = trades
     .filter((t) => t.entry_time >= since && violations.has(t.id))
     .sort((a, b) => b.entry_time.localeCompare(a.entry_time));

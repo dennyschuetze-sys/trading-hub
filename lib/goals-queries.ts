@@ -45,12 +45,18 @@ export async function loadDisciplineData(
   supabase: Supabase,
   preloaded?: { trades?: StatTrade[]; rules?: RiskRules },
 ): Promise<{ data: DisciplineData; rules: RiskRules }> {
-  const [trades, rules, plans, checklist] = await Promise.all([
-    preloaded?.trades ?? fetchStatTrades(supabase),
-    preloaded?.rules ?? getRiskRules(supabase),
+  // Pläne und Checkliste hängen nicht von den Verstößen ab – sie laufen in derselben Runde wie deren Abfragen
+  const [plans, checklist, { trades, rules, violations }] = await Promise.all([
     fetchPlans(supabase),
     fetchChecklist(supabase),
+    (async () => {
+      const [trades, rules] = await Promise.all([
+        preloaded?.trades ?? fetchStatTrades(supabase),
+        preloaded?.rules ?? getRiskRules(supabase),
+      ]);
+      const { violations } = await loadViolations(supabase, {}, { trades, rules });
+      return { trades, rules, violations };
+    })(),
   ]);
-  const { violations } = await loadViolations(supabase, {}, { trades, rules });
   return { data: { trades, plans, violations, checklist, rulesActive: hasAnyRule(rules) }, rules };
 }

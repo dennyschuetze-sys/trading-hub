@@ -24,13 +24,14 @@ export const maxDuration = 120;
 export default async function NewsPage() {
   const supabase = await createClient();
   const settings = await getNewsSettings(supabase);
+  const calendarResult = getCalendar();
   const [calendar, news, { data: symbols }, briefing] = await Promise.all([
-    getCalendar(),
+    calendarResult,
     getNews(settings.newsSources),
     supabase.from("trades").select("symbol").eq("is_backtest", false).limit(1000),
     loadReport(supabase, "news_daily", todayBerlin(), NewsBriefingSchema),
+    calendarResult.then((c) => rememberEvents(supabase, c.events)),
   ]);
-  await rememberEvents(supabase, calendar.events);
 
   // Vorschlag: Währungen der Symbole, die tatsächlich gehandelt werden
   const suggested = [...new Set((symbols ?? []).flatMap((s) => currenciesForSymbol(s.symbol)))].sort();

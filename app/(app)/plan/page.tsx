@@ -47,8 +47,8 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
   const date = isValidDate(sp.date) ? sp.date : today;
 
   const supabase = await createClient();
-  const [calendar, newsSettings] = await Promise.all([getCalendar(), getNewsSettings(supabase)]);
-  await rememberEvents(supabase, calendar.events);
+  const calendarResult = getCalendar();
+  const [calendar, newsSettings] = await Promise.all([calendarResult, getNewsSettings(supabase)]);
   const dayEvents = filterEvents(calendar.events, newsSettings.calendarCurrencies, newsSettings.minImpact)
     .filter((e) => berlinDay(e.time) === date)
     .map((e) => ({ id: e.id, title: e.title, currency: e.currency, impact: e.impact, timeLabel: eventTime(e) }));
@@ -66,6 +66,7 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
       .order("entry_time"),
     supabase.from("day_charts").select(DAY_CHART_COLUMNS).eq("chart_date", date).order("created_at"),
     supabase.auth.getUser(),
+    rememberEvents(supabase, calendar.events),
   ]);
   const charts = await withSignedUrls(supabase, chartRows ?? []);
 

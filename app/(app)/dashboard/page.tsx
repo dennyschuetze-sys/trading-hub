@@ -41,14 +41,30 @@ const toneOf = (v: number | null | undefined) => (v == null || v === 0 ? null : 
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const [{ data: accounts }, trades, cookieStore] = await Promise.all([
-    supabase
-      .from("accounts")
-      .select("id, name, firm, currency, starting_balance, status, phase, account_type, max_daily_loss, max_drawdown, drawdown_type, profit_target, min_trading_days")
-      .order("name"),
-    fetchStatTrades(supabase),
-    cookies(),
-  ]);
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const today = berlinParts(nowIso).date;
+  const week = periodStart(today, "week");
+
+  // Alles, was nur vom Datum abhängt, startet gleich mit Konten und Trades: eine Runde statt vieler hintereinander
+  const calendarResult = getCalendar();
+  const [{ data: accounts }, trades, cookieStore, { data: todayPlan }, calendar, newsSettings, riskRules, { data: weekGoals }, { data: weekReview }] =
+    await Promise.all([
+      supabase
+        .from("accounts")
+        .select("id, name, firm, currency, starting_balance, status, phase, account_type, max_daily_loss, max_drawdown, drawdown_type, profit_target, min_trading_days")
+        .order("name"),
+      fetchStatTrades(supabase),
+      cookies(),
+      supabase.from("daily_plans").select("*").eq("plan_date", today).maybeSingle(),
+      calendarResult,
+      getNewsSettings(supabase),
+      getRiskRules(supabase),
+      supabase.from("goals").select("*").eq("period_type", "week").eq("period_start", week).order("position").order("created_at"),
+      supabase.from("reviews").select("id").eq("period_type", "week").eq("period_start", week).maybeSingle(),
+      // Speichern der Termine muss nicht auf etwas warten – nur auf den Kalender
+      calendarResult.then((c) => rememberEvents(supabase, c.events)),
+    ]);
   const list = accounts ?? [];
 
   if (!list.length) {
@@ -76,16 +92,6 @@ export default async function DashboardPage() {
     );
   }
 
-  const now = new Date();
-  const nowIso = now.toISOString();
-  const today = berlinParts(nowIso).date;
-  const [{ data: todayPlan }, calendar, newsSettings, riskRules] = await Promise.all([
-    supabase.from("daily_plans").select("*").eq("plan_date", today).maybeSingle(),
-    getCalendar(),
-    getNewsSettings(supabase),
-    getRiskRules(supabase),
-  ]);
-  await rememberEvents(supabase, calendar.events);
   const risk = buildRiskToday(list, trades, riskRules, calendar.events, newsSettings.calendarCurrencies, now);
 
   const subtitleOf = (a: (typeof list)[number]) => [a.firm, labelFor(PHASES, a.phase)].filter(Boolean).join(" · ");
@@ -180,11 +186,12 @@ export default async function DashboardPage() {
   ];
 
   // 5. Heute & Woche -------------------------------------------------------------------
-  const week = periodStart(today, "week");
-  const [{ data: discipline }, { data: weekGoals }, { data: weekReview }] = await Promise.all([
+  const recent = closedTrades(trades).reverse().slice(0, 6);
+  const [{ data: discipline }, { data: recentDetails }] = await Promise.all([
     loadDisciplineData(supabase, { trades, rules: riskRules }),
-    supabase.from("goals").select("*").eq("period_type", "week").eq("period_start", week).order("position").order("created_at"),
-    supabase.from("reviews").select("id").eq("period_type", "week").eq("period_start", week).maybeSingle(),
+    recent.length
+      ? supabase.from("trades").select("id, entry_criterion, strategies(name)").in("id", recent.map((t) => t.id))
+      : { data: [] },
   ]);
   const disciplineIndex = buildIndex(discipline);
   const weekCtx = { index: disciplineIndex, type: "week" as const, start: week, today };
@@ -201,10 +208,6 @@ export default async function DashboardPage() {
     .map((a) => ({ account: a, rules: evaluateAccount(a, trades.filter((t) => t.account_id === a.id), now) }));
 
   // 7. Letzte Trades (über alle Accounts) mit Session und Setup ----------------------------
-  const recent = closedTrades(trades).reverse().slice(0, 6);
-  const { data: recentDetails } = recent.length
-    ? await supabase.from("trades").select("id, entry_criterion, strategies(name)").in("id", recent.map((t) => t.id))
-    : { data: [] };
   const detailOf = new Map((recentDetails ?? []).map((d) => [d.id, d]));
   // Account-Namen nur, wenn die Liste Trades aus mehreren Accounts enthält
   const mixedAccounts = new Set(recent.map((t) => t.account_id)).size > 1;
