@@ -37,6 +37,31 @@ export function monthYear(isoOrDate: string) {
   return new Intl.DateTimeFormat("de-DE", { month: "short", year: "2-digit", timeZone: TIME_ZONE }).format(date);
 }
 
+/** „September 2026“ für einen Monat (1–12) */
+export function monthLabel(year: number, month: number) {
+  return new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" }).format(
+    new Date(Date.UTC(year, month - 1, 15)),
+  );
+}
+
+/** Kompakt für kleine Zellen: 1.234 → „1,2 Tsd.“ */
+export function cellAmount(value: number, currency: string) {
+  const abs = Math.abs(value);
+  const text =
+    abs >= 1000
+      ? new Intl.NumberFormat("de-DE", { notation: "compact", maximumFractionDigits: 1 }).format(abs)
+      : new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 }).format(abs);
+  const symbol = new Intl.NumberFormat("de-DE", { style: "currency", currency }).formatToParts(0).find((p) => p.type === "currency")?.value;
+  return `${value > 0 ? "+" : value < 0 ? "−" : ""}${text} ${symbol ?? ""}`.trim();
+}
+
+/** Zellenhintergrund eines Tages in Gewinn- bzw. Verlustfarbe; je größer der Betrag im Verhältnis zu `maxAbs`, desto kräftiger. */
+export function pnlWash(pnl: number, maxAbs: number) {
+  if (pnl === 0) return undefined;
+  const strength = Math.round(14 + 46 * Math.min(1, Math.abs(pnl) / maxAbs));
+  return `color-mix(in oklch, var(${pnl > 0 ? "--profit" : "--loss"}) ${strength}%, transparent)`;
+}
+
 export function longDate(isoOrDate: string) {
   const date = isoOrDate.length === 10 ? new Date(`${isoOrDate}T12:00:00Z`) : new Date(isoOrDate);
   return new Intl.DateTimeFormat("de-DE", {

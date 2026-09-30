@@ -2,6 +2,7 @@ import {
   BarChart3,
   BookOpen,
   CalendarCheck,
+  CalendarDays,
   FlaskConical,
   FlaskRound,
   GalleryVerticalEnd,
@@ -27,6 +28,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, phase: 3 },
       { href: "/plan", label: "Tagesplan", icon: CalendarCheck, phase: 5 },
+      { href: "/calendar", label: "Trading-Kalender", icon: CalendarDays, phase: 5 },
       { href: "/news", label: "News & Kalender", icon: Newspaper, phase: 6 },
       { href: "/cot", label: "COT-Daten", icon: Landmark, phase: 12 },
     ],

@@ -7,6 +7,8 @@ describe("aktiver Menüpunkt", () => {
     expect(activeNavHref("/plan")).toBe("/plan");
     expect(activeNavHref("/plan/history")).toBe("/plan");
     expect(activeNavHref("/journal/123/edit")).toBe("/journal");
+    expect(activeNavHref("/calendar")).toBe("/calendar");
+    expect(activeNavHref("/news")).toBe("/news");
   });
 
   it("passt nur an Pfadgrenzen", () => {

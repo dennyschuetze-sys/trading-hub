@@ -7,27 +7,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { DayResult } from "@/lib/stats";
 import { formatMoney } from "@/lib/trading";
 import { cn } from "@/lib/utils";
-import { longDate } from "./format";
+import { cellAmount, longDate, monthLabel, pnlWash } from "./format";
 
 const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const pad = (n: number) => String(n).padStart(2, "0");
-
-function monthLabel(year: number, month: number) {
-  return new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" }).format(
-    new Date(Date.UTC(year, month - 1, 15)),
-  );
-}
-
-/** Kompakt für kleine Zellen: 1.234 → „1,2 Tsd.“ */
-function cellAmount(value: number, currency: string) {
-  const abs = Math.abs(value);
-  const text =
-    abs >= 1000
-      ? new Intl.NumberFormat("de-DE", { notation: "compact", maximumFractionDigits: 1 }).format(abs)
-      : new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 }).format(abs);
-  const symbol = new Intl.NumberFormat("de-DE", { style: "currency", currency }).formatToParts(0).find((p) => p.type === "currency")?.value;
-  return `${value > 0 ? "+" : value < 0 ? "−" : ""}${text} ${symbol ?? ""}`.trim();
-}
 
 /**
  * Monatskalender der Tagesergebnisse. Die Farbe (Gewinn/Verlust, Deckkraft nach Betrag) zeigt die Richtung,
@@ -62,11 +45,6 @@ export function PnlCalendar({ days, currency, initialMonth }: { days: DayResult[
       const d = new Date(Date.UTC(year, month - 1 + delta, 1));
       return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 };
     });
-
-  const wash = (pnl: number) => {
-    const strength = Math.round(14 + 46 * Math.min(1, Math.abs(pnl) / maxAbs));
-    return pnl === 0 ? undefined : `color-mix(in oklch, var(${pnl > 0 ? "--profit" : "--loss"}) ${strength}%, transparent)`;
-  };
 
   return (
     <div className="grid gap-3">
@@ -110,7 +88,7 @@ export function PnlCalendar({ days, currency, initialMonth }: { days: DayResult[
                       "flex aspect-square flex-col justify-between rounded-md border p-1 outline-none sm:aspect-auto sm:h-16 sm:p-1.5",
                       day ? "border-transparent focus-visible:ring-2 focus-visible:ring-ring" : "border-border/50 text-muted-foreground",
                     )}
-                    style={day ? { background: wash(day.pnl) } : undefined}
+                    style={day ? { background: pnlWash(day.pnl, maxAbs) } : undefined}
                   >
                     <span className="text-[0.625rem] leading-none text-muted-foreground sm:text-xs">{Number(date.slice(8))}</span>
                     {day && (
