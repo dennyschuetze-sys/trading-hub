@@ -831,9 +831,159 @@ export type Database = {
           },
         ];
       };
+      ki_ingest_tokens: {
+        Row: {
+          created_at: string;
+          label: string;
+          token_hash: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          label?: string;
+          token_hash: string;
+          user_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ki_ingest_tokens"]["Insert"]>;
+        Relationships: [];
+      };
+      ki_models: {
+        Row: {
+          accepted: boolean;
+          data_until: string;
+          ic_new: number | null;
+          ic_old: number | null;
+          importance: Json;
+          note: string | null;
+          train_rows: number;
+          trained_at: string;
+          user_id: string;
+          version: string;
+        };
+        Insert: {
+          accepted: boolean;
+          data_until: string;
+          ic_new?: number | null;
+          ic_old?: number | null;
+          importance?: Json;
+          note?: string | null;
+          train_rows: number;
+          trained_at: string;
+          user_id: string;
+          version: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ki_models"]["Insert"]>;
+        Relationships: [];
+      };
+      ki_predictions: {
+        Row: {
+          atr: number;
+          bar_at: string;
+          close: number;
+          made_at: string;
+          model_version: string;
+          pred_long: number;
+          pred_short: number;
+          user_id: string;
+        };
+        Insert: {
+          atr: number;
+          bar_at: string;
+          close: number;
+          made_at: string;
+          model_version: string;
+          pred_long: number;
+          pred_short: number;
+          user_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ki_predictions"]["Insert"]>;
+        Relationships: [];
+      };
+      ki_status: {
+        Row: {
+          closed_trades: number;
+          last_bar_at: string | null;
+          last_close: number | null;
+          live_since: string | null;
+          mean_r: number | null;
+          model_version: string | null;
+          note: string | null;
+          pred_long: number | null;
+          pred_short: number | null;
+          random_band: Json;
+          random_mean_r: number | null;
+          random_p: number | null;
+          run_at: string;
+          sum_r: number | null;
+          user_id: string;
+        };
+        Insert: {
+          closed_trades?: number;
+          last_bar_at?: string | null;
+          last_close?: number | null;
+          live_since?: string | null;
+          mean_r?: number | null;
+          model_version?: string | null;
+          note?: string | null;
+          pred_long?: number | null;
+          pred_short?: number | null;
+          random_band?: Json;
+          random_mean_r?: number | null;
+          random_p?: number | null;
+          run_at: string;
+          sum_r?: number | null;
+          user_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ki_status"]["Insert"]>;
+        Relationships: [];
+      };
+      ki_trades: {
+        Row: {
+          entry_at: string | null;
+          entry_price: number | null;
+          exit_at: string | null;
+          exit_price: number | null;
+          exit_reason: string | null;
+          model_version: string;
+          pred: number;
+          r_gross: number | null;
+          r_net: number | null;
+          side: string;
+          signal_at: string;
+          status: string;
+          stop_price: number | null;
+          target_price: number | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          entry_at?: string | null;
+          entry_price?: number | null;
+          exit_at?: string | null;
+          exit_price?: number | null;
+          exit_reason?: string | null;
+          model_version: string;
+          pred: number;
+          r_gross?: number | null;
+          r_net?: number | null;
+          side: string;
+          signal_at: string;
+          status: string;
+          stop_price?: number | null;
+          target_price?: number | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ki_trades"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
+      ki_ingest: {
+        Args: { p_token: string; p_payload: Json };
+        Returns: undefined;
+      };
       claim_ai_generation: {
         Args: { p_kind: string; p_period_key: string; p_max: number };
         Returns: number | null;

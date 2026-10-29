@@ -1,6 +1,7 @@
 import {
   BarChart3,
   BookOpen,
+  BrainCircuit,
   CalendarCheck,
   CalendarDays,
   FlaskConical,
@@ -52,6 +53,7 @@ export const navGroups: NavGroup[] = [
       { href: "/risk", label: "Risiko-Tools", icon: ShieldAlert, phase: 8 },
       { href: "/goals", label: "Ziele & Reviews", icon: Target, phase: 9 },
       { href: "/backtesting", label: "Backtesting", icon: FlaskConical, phase: 10 },
+      { href: "/ki", label: "KI-Schattenbetrieb", icon: BrainCircuit, phase: 13 },
     ],
   },
   {

@@ -9,6 +9,7 @@ describe("aktiver Menüpunkt", () => {
     expect(activeNavHref("/journal/123/edit")).toBe("/journal");
     expect(activeNavHref("/calendar")).toBe("/calendar");
     expect(activeNavHref("/news")).toBe("/news");
+    expect(activeNavHref("/ki")).toBe("/ki");
   });
 
   it("passt nur an Pfadgrenzen", () => {

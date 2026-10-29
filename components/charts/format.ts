@@ -26,6 +26,11 @@ export function niceTicks(min: number, max: number, count = 5): number[] {
   return ticks;
 }
 
+/** Uhrzeit für Achsen über wenige Tage: „17:15“ */
+export function clockTime(iso: string) {
+  return new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: TIME_ZONE }).format(new Date(iso));
+}
+
 export function shortDate(isoOrDate: string) {
   const date = isoOrDate.length === 10 ? new Date(`${isoOrDate}T12:00:00Z`) : new Date(isoOrDate);
   return new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", timeZone: TIME_ZONE }).format(date);

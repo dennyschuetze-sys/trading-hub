@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { niceTicks } from "./format";
+import { clockTime, niceTicks } from "./format";
+
+describe("clockTime", () => {
+  it("zeigt die Berliner Uhrzeit", () => {
+    expect(clockTime("2026-10-29T16:15:00Z")).toBe("17:15");
+    expect(clockTime("2026-07-01T06:00:00Z")).toBe("08:00");
+  });
+});
 
 describe("niceTicks", () => {
   it("runde Schritte, die den Bereich einschließen", () => {

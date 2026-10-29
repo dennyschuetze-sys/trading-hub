@@ -67,3 +67,14 @@ Auf Knopfdruck, mit Claude Opus 5 (`lib/ai/`), Ergebnisse werden in `ai_reports`
 
 Benötigt `ANTHROPIC_API_KEY` in Vercel. Pro Tag bzw. Zeitraum höchstens 5 Neuerstellungen. Trade-Notizen und Reviews
 werden dafür an die Claude API übermittelt.
+
+## KI-Schattenbetrieb
+
+Die Seite **/ki** zeigt die Gold-KI aus dem Nachbarprojekt `gold-ki`: Sie sagt auf dem Rechner mit dem VT-Terminal jede
+M15-Kerze von XAUUSD voraus, rechnet gedachte Trades mit VT-Kosten ab, vergleicht sie mit Zufall und lernt wöchentlich
+neu. Sie handelt nicht.
+
+Geschrieben wird nur über die Funktion `ki_ingest()` (Migration `20261029000001_ki_shadow.sql`). Der Schattenbetrieb
+ruft sie mit dem Publishable Key und einem eigenen Zugangsschlüssel auf, dessen SHA-256 in `ki_ingest_tokens` steht.
+Der Schlüssel darf nur die KI-Tabellen seines Nutzers schreiben; ein Secret Key ist dafür nicht nötig. Die Tabellen
+`ki_status`, `ki_predictions`, `ki_trades` und `ki_models` sind für den Nutzer nur lesbar.
