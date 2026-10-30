@@ -999,10 +999,56 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["ki_trades"]["Insert"]>;
         Relationships: [];
       };
+      market_days: {
+        Row: {
+          user_id: string;
+          symbol: string;
+          day: string;
+          open: number;
+          high: number;
+          low: number;
+          close: number;
+          source: string;
+        };
+        Insert: {
+          user_id: string;
+          symbol: string;
+          day: string;
+          open: number;
+          high: number;
+          low: number;
+          close: number;
+          source: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["market_days"]["Insert"]>;
+        Relationships: [];
+      };
+      market_volumes: {
+        Row: {
+          user_id: string;
+          symbol: string;
+          day: string;
+          contracts_front: number;
+          contracts_next: number | null;
+        };
+        Insert: {
+          user_id: string;
+          symbol: string;
+          day: string;
+          contracts_front: number;
+          contracts_next?: number | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["market_volumes"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
       ki_ingest: {
+        Args: { p_token: string; p_payload: Json };
+        Returns: undefined;
+      };
+      market_ingest: {
         Args: { p_token: string; p_payload: Json };
         Returns: undefined;
       };

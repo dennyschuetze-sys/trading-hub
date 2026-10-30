@@ -19,11 +19,17 @@ import { clockTime, niceTicks, shortDate } from "./format";
 export type CandleTrade = ChartTrade & { href?: string };
 
 type Datum = KiBar & { index: number; range: [number, number] };
-type CandleProps = { x?: number; y?: number; width?: number; height?: number; payload?: Datum };
+export type CandleProps = {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  payload?: Pick<KiBar, "open" | "high" | "low" | "close">;
+};
 type DotProps = { cx?: number; cy?: number };
 
 /** Kerze: recharts liefert das Rechteck von Hoch bis Tief, Körper und Docht werden darin gezeichnet. */
-function Candle({ x = 0, y = 0, width = 0, height = 0, payload }: CandleProps) {
+export function Candle({ x = 0, y = 0, width = 0, height = 0, payload }: CandleProps) {
   if (!payload) return null;
   const { open, high, low, close } = payload;
   const color = close >= open ? "var(--profit)" : "var(--loss)";
