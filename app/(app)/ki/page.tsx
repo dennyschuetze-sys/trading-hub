@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { BrainCircuit } from "lucide-react";
 import { KiBalanceChart } from "@/components/charts/ki-balance-chart";
+import { KiCandleChart } from "@/components/charts/ki-candle-chart";
 import { KiPredictionChart } from "@/components/charts/ki-prediction-chart";
 import { StatSection, StatStrip } from "@/components/charts/stat-tile";
 import { AutoRefresh } from "@/components/layout/auto-refresh";
@@ -10,11 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   balanceSeries,
   featureLabel,
+  formatPred,
   goldMarketOpen,
   isSignal,
   isStale,
   parseBand,
   parseImportance,
+  tradeKey,
   tradeState,
   type KiModel,
   type KiSide,
@@ -34,7 +38,7 @@ const LATE_MS = 45 * 60_000;
 
 export default async function KiPage() {
   const supabase = await createClient();
-  const { status, predictions, recent, closed, models } = await fetchKiOverview(supabase);
+  const { status, bars, predictions, recent, closed, models } = await fetchKiOverview(supabase);
 
   if (!status) {
     return (
@@ -114,6 +118,21 @@ export default async function KiPage() {
           ]}
         />
 
+        <StatSection title="Chart" question="Wo hat die KI gehandelt?" hint="M15, Uhrzeit Berlin">
+          <Card>
+            <CardHeader>
+              <CardTitle>XAUUSD-VIP mit den gedachten Trades</CardTitle>
+              <CardDescription>
+                Dreieck: Einstieg in Trade-Richtung · Punkt: Ausstieg · rot gestrichelt: SL · grün gestrichelt: TP. Ein
+                Klick auf ein Dreieck oder einen Trade in der Liste zeigt, warum die KI ihn gesetzt hat.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <KiCandleChart bars={bars} trades={recent.map((t) => ({ ...t, href: `/ki/${tradeKey(t)}` }))} />
+            </CardContent>
+          </Card>
+        </StatSection>
+
         <StatSection
           title="Jetzt"
           question="Was erwartet die KI von den nächsten Kerzen?"
@@ -181,7 +200,7 @@ function sideTile(status: KiStatus, running: KiTrade[], side: KiSide) {
   const open = running.find((t) => t.side === side);
   return {
     label: side === "long" ? "Jetzt Long" : "Jetzt Short",
-    value: formatR(pred),
+    value: formatPred(pred),
     tone: tone(pred),
     hint: open
       ? open.status === "wartet"
@@ -209,26 +228,31 @@ function TradeList({ trades }: { trades: KiTrade[] }) {
         {trades.length ? (
           <ul className="divide-y">
             {trades.map((t) => (
-              <li key={`${t.side}|${t.signal_at}`} className="flex items-center gap-3 py-3">
-                <span
-                  className={cn(
-                    "w-14 shrink-0 rounded-md py-0.5 text-center text-[0.65625rem] font-bold tracking-wider",
-                    t.side === "long" ? "bg-profit/20 text-profit" : "bg-loss/20 text-loss",
-                  )}
+              <li key={`${t.side}|${t.signal_at}`}>
+                <Link
+                  href={`/ki/${tradeKey(t)}`}
+                  className="-mx-2 flex items-center gap-3 rounded-md px-2 py-3 transition-colors hover:bg-foreground/[0.04]"
                 >
-                  {t.side === "long" ? "LONG" : "SHORT"}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold tabular-nums">{formatDateTime(t.signal_at)}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {tradeState(t)}
-                    {t.entry_price != null && ` · Einstieg ${formatNumber(t.entry_price, 2)}`} · erwartet {formatR(t.pred)}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right tabular-nums">
-                  <p className={cn("font-semibold", pnlClass(t.r_net))}>{formatR(t.r_net)}</p>
-                  {t.status === "offen" && <p className="text-xs text-muted-foreground">Stand jetzt</p>}
-                </div>
+                  <span
+                    className={cn(
+                      "w-14 shrink-0 rounded-md py-0.5 text-center text-[0.65625rem] font-bold tracking-wider",
+                      t.side === "long" ? "bg-profit/20 text-profit" : "bg-loss/20 text-loss",
+                    )}
+                  >
+                    {t.side === "long" ? "LONG" : "SHORT"}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold tabular-nums">{formatDateTime(t.signal_at)}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {tradeState(t)}
+                      {t.entry_price != null && ` · Einstieg ${formatNumber(t.entry_price, 2)}`} · erwartet {formatPred(t.pred)}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right tabular-nums">
+                    <p className={cn("font-semibold", pnlClass(t.r_net))}>{formatR(t.r_net)}</p>
+                    {t.status === "offen" && <p className="text-xs text-muted-foreground">Stand jetzt</p>}
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>

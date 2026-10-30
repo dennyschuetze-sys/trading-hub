@@ -831,6 +831,26 @@ export type Database = {
           },
         ];
       };
+      ki_bars: {
+        Row: {
+          bar_at: string;
+          close: number;
+          high: number;
+          low: number;
+          open: number;
+          user_id: string;
+        };
+        Insert: {
+          bar_at: string;
+          close: number;
+          high: number;
+          low: number;
+          open: number;
+          user_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ki_bars"]["Insert"]>;
+        Relationships: [];
+      };
       ki_ingest_tokens: {
         Row: {
           created_at: string;
@@ -948,6 +968,7 @@ export type Database = {
           pred: number;
           r_gross: number | null;
           r_net: number | null;
+          reasons: Json;
           side: string;
           signal_at: string;
           status: string;
@@ -966,6 +987,7 @@ export type Database = {
           pred: number;
           r_gross?: number | null;
           r_net?: number | null;
+          reasons?: Json;
           side: string;
           signal_at: string;
           status: string;

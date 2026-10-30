@@ -1,5 +1,131 @@
 import { describe, expect, it } from "vitest";
-import { balanceSeries, featureLabel, goldMarketOpen, isSignal, isStale, parseBand, parseImportance, tradeState } from "./ki";
+import {
+  balanceSeries,
+  barIndexAt,
+  featureLabel,
+  featureValue,
+  formatPred,
+  goldMarketOpen,
+  isSignal,
+  isStale,
+  parseBand,
+  parseImportance,
+  parseReasons,
+  parseTradeKey,
+  tradeKey,
+  tradeSpan,
+  tradeState,
+  type ChartTrade,
+} from "./ki";
+
+/** M15-Kerzen ab 16:00 UTC, eine fehlt (Tagespause wie bei Gold). */
+const bars = ["16:00", "16:15", "16:30", "16:45", "18:00", "18:15"].map((t) => ({ bar_at: `2026-10-29T${t}:00+00:00` }));
+
+const trade = (over: Partial<ChartTrade>): ChartTrade => ({
+  side: "short",
+  signal_at: "2026-10-29T16:00:00+00:00",
+  status: "zu",
+  entry_at: "2026-10-29T16:15:00+00:00",
+  entry_price: 4015,
+  stop_price: 4033,
+  target_price: 3988,
+  exit_at: "2026-10-29T16:45:00+00:00",
+  exit_price: 3988,
+  exit_reason: "Ziel",
+  r_net: 1.48,
+  ...over,
+});
+
+describe("tradeKey", () => {
+  it("kodiert Richtung und Signalzeit und liest sie zurück", () => {
+    const key = tradeKey({ side: "short", signal_at: "2026-10-29T16:00:00+00:00" });
+    expect(key).toBe("short-1793289600");
+    expect(parseTradeKey(key)).toEqual({ side: "short", signalAt: "2026-10-29T16:00:00.000Z" });
+    expect(parseTradeKey("seitwärts-1793289600")).toBeNull();
+    expect(parseTradeKey("long-abc")).toBeNull();
+  });
+});
+
+describe("barIndexAt", () => {
+  it("findet die Kerze, in die ein Zeitpunkt fällt", () => {
+    expect(barIndexAt(bars, "2026-10-29T16:15:00Z")).toBe(1);
+    expect(barIndexAt(bars, "2026-10-29T16:20:00Z")).toBe(1);
+    expect(barIndexAt(bars, "2026-10-29T17:30:00Z")).toBe(3); // in der Pause: zuletzt begonnene Kerze
+    expect(barIndexAt(bars, "2026-10-29T18:29:59Z")).toBe(5);
+  });
+
+  it("liefert null außerhalb der Kerzen", () => {
+    expect(barIndexAt(bars, "2026-10-29T15:59:00Z")).toBeNull();
+    expect(barIndexAt(bars, "2026-10-29T18:30:00Z")).toBeNull();
+    expect(barIndexAt([], "2026-10-29T16:00:00Z")).toBeNull();
+  });
+});
+
+describe("tradeSpan", () => {
+  it("legt Signal, Einstieg, Ausstieg und Linien auf die Kerzen", () => {
+    expect(tradeSpan(bars, trade({}))).toEqual({ signal: 0, entry: 1, exit: 3, lines: [1, 3] });
+  });
+
+  it("zählt einen Ausstieg nach Zeit zur letzten Kerze des Trades", () => {
+    const span = tradeSpan(bars, trade({ exit_reason: "Zeit", exit_at: "2026-10-29T16:45:00+00:00" }));
+    expect(span.exit).toBe(2);
+  });
+
+  it("zieht laufende Trades bis zur letzten Kerze und kennt wartende ohne Linien", () => {
+    expect(tradeSpan(bars, trade({ status: "offen", exit_at: null, exit_reason: null })).lines).toEqual([1, 5]);
+    expect(tradeSpan(bars, trade({ status: "wartet", entry_at: null, exit_at: null, exit_reason: null }))).toEqual({
+      signal: 0,
+      entry: null,
+      exit: null,
+      lines: null,
+    });
+  });
+
+  it("schneidet am Rand ab, wenn der Trade vor den Kerzen begann", () => {
+    const span = tradeSpan(bars, trade({ signal_at: "2026-10-29T15:00:00Z", entry_at: "2026-10-29T15:15:00Z" }));
+    expect(span).toEqual({ signal: null, entry: null, exit: 3, lines: [0, 3] });
+  });
+});
+
+describe("featureValue", () => {
+  it("zeigt jedes Merkmal in seiner Einheit", () => {
+    expect(featureValue("sma_200", -4.106)).toBe("-4,1 ATR");
+    expect(featureValue("ret_16", 1.25)).toBe("+1,3 ATR");
+    expect(featureValue("d_lo", 0.593)).toBe("0,6 ATR");
+    expect(featureValue("cost_r", 0.016948)).toBe("0,017 R");
+    expect(featureValue("atr_bp", 22.04)).toBe("22 bp");
+    expect(featureValue("vol_20", 1.5)).toBe("1,50-fach");
+    expect(featureValue("pos_96", 0.78)).toBe("78 %");
+    expect(featureValue("hour", 21.25)).toBe("21:15 New York");
+    expect(featureValue("dow", 3)).toBe("Donnerstag");
+    expect(featureValue("rsi", null)).toBe("–");
+  });
+});
+
+describe("parseReasons", () => {
+  it("liest Ausgangswert, Beiträge und Rest", () => {
+    const r = parseReasons({
+      base: -0.104,
+      rest: 0.01,
+      items: [{ name: "cost_r", value: 0.017, contrib: 0.089 }, { name: "rsi", value: null, contrib: -0.002 }, { name: 1 }],
+      later: true,
+    });
+    expect(r).toEqual({
+      base: -0.104,
+      rest: 0.01,
+      items: [
+        { name: "cost_r", value: 0.017, contrib: 0.089 },
+        { name: "rsi", value: null, contrib: -0.002 },
+      ],
+      later: true,
+    });
+  });
+
+  it("gibt null ohne Gründe", () => {
+    expect(parseReasons({})).toBeNull();
+    expect(parseReasons(null)).toBeNull();
+  });
+});
 
 describe("featureLabel", () => {
   it("übersetzt die Kursänderungen in Zeiträume von M15-Kerzen", () => {
@@ -37,6 +163,14 @@ describe("isStale", () => {
     expect(isStale("2026-10-29T16:30:00Z", now)).toBe(false);
     expect(isStale("2026-10-29T16:10:00Z", now)).toBe(true);
     expect(isStale(null, now)).toBe(true);
+  });
+});
+
+describe("formatPred", () => {
+  it("zeigt auch kleine Vorhersagen erkennbar", () => {
+    expect(formatPred(0.003725)).toBe("+0,004 R");
+    expect(formatPred(-0.104177)).toBe("-0,104 R");
+    expect(formatPred(null)).toBe("–");
   });
 });
 

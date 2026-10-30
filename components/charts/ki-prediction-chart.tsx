@@ -1,8 +1,8 @@
 "use client";
 
 import { CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import type { KiPrediction } from "@/lib/ki";
-import { formatDateTime, formatNumber, formatR } from "@/lib/trading";
+import { formatPred, type KiPrediction } from "@/lib/ki";
+import { formatDateTime, formatNumber } from "@/lib/trading";
 import { ChartTooltipBox } from "./chart-tooltip";
 import { clockTime, niceTicks, shortDate } from "./format";
 
@@ -38,7 +38,7 @@ export function KiPredictionChart({ predictions, height = 280 }: { predictions: 
     <div
       style={{ height }}
       role="img"
-      aria-label={`Erwartetes Netto-R je Kerze, zuletzt Long ${formatR(latest.pred_long)} und Short ${formatR(latest.pred_short)}`}
+      aria-label={`Erwartetes Netto-R je Kerze, zuletzt Long ${formatPred(latest.pred_long)} und Short ${formatPred(latest.pred_short)}`}
     >
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -74,7 +74,7 @@ export function KiPredictionChart({ predictions, height = 280 }: { predictions: 
               if (!active || !p) return null;
               return (
                 <ChartTooltipBox
-                  value={`Long ${formatR(p.pred_long)} · Short ${formatR(p.pred_short)}`}
+                  value={`Long ${formatPred(p.pred_long)} · Short ${formatPred(p.pred_short)}`}
                   label={formatDateTime(p.bar_at)}
                   detail={`Gold ${formatNumber(p.close, 2)}`}
                 />

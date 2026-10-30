@@ -77,4 +77,8 @@ neu. Sie handelt nicht.
 Geschrieben wird nur über die Funktion `ki_ingest()` (Migration `20261029000001_ki_shadow.sql`). Der Schattenbetrieb
 ruft sie mit dem Publishable Key und einem eigenen Zugangsschlüssel auf, dessen SHA-256 in `ki_ingest_tokens` steht.
 Der Schlüssel darf nur die KI-Tabellen seines Nutzers schreiben; ein Secret Key ist dafür nicht nötig. Die Tabellen
-`ki_status`, `ki_predictions`, `ki_trades` und `ki_models` sind für den Nutzer nur lesbar.
+`ki_status`, `ki_predictions`, `ki_trades`, `ki_models` und `ki_bars` sind für den Nutzer nur lesbar.
+
+Der Chart auf /ki zeigt die M15-Kerzen (`ki_bars`) mit den gedachten Trades. Jeder Trade hat eine eigene Seite
+`/ki/<long|short>-<Signalzeit in Sekunden>` mit Einstieg, SL, TP, Ausstieg und den Gründen des Modells: den SHAP-Werten
+der Merkmale aus `ki_trades.reasons`, die zusammen mit dem Ausgangswert genau die Vorhersage ergeben.
