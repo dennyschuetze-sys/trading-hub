@@ -3,7 +3,7 @@
 Persönliches Trading-Dashboard: Journal, Import aus MetaTrader/TradingView, Statistiken, Prop-Firm-Limits,
 Strategien & Wissen, Tagesplanung sowie News & Wirtschaftskalender.
 
-**Technik:** Next.js (App Router), TypeScript, Tailwind CSS + shadcn/ui, Supabase (Postgres, Auth, Storage), Recharts, Vitest.
+**Technik:** Next.js (App Router), TypeScript, Tailwind CSS + shadcn/ui, Supabase (Postgres, Auth, Storage), Recharts, TradingView Lightweight Charts (Kerzenchart der KI-Seite), Vitest.
 
 ## Lokal starten
 
@@ -79,6 +79,9 @@ ruft sie mit dem Publishable Key und einem eigenen Zugangsschlüssel auf, dessen
 Der Schlüssel darf nur die KI-Tabellen seines Nutzers schreiben; ein Secret Key ist dafür nicht nötig. Die Tabellen
 `ki_status`, `ki_predictions`, `ki_trades`, `ki_models` und `ki_bars` sind für den Nutzer nur lesbar.
 
-Der Chart auf /ki zeigt die M15-Kerzen (`ki_bars`) mit den gedachten Trades. Jeder Trade hat eine eigene Seite
+Der Chart auf /ki zeigt die Kerzen (`ki_bars`, die letzten 3000 in M15, umschaltbar auf H1 und H4) mit den gedachten
+Trades als Long-/Short-Boxen wie in TradingView. Er ist mit TradingView Lightweight Charts gebaut
+(`components/charts/ki-trade-chart.tsx`, Apache-2.0; das TradingView-Logo im Chart ist der verlangte Hinweis darauf).
+Die Zeiten sind auf Berlin verschoben, weil die Bibliothek nur UTC anzeigt (`lib/ki-chart.ts`). Jeder Trade hat eine eigene Seite
 `/ki/<long|short>-<Signalzeit in Sekunden>` mit Einstieg, SL, TP, Ausstieg und den Gründen des Modells: den SHAP-Werten
 der Merkmale aus `ki_trades.reasons`, die zusammen mit dem Ausgangswert genau die Vorhersage ergeben.

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { BrainCircuit } from "lucide-react";
 import { KiBalanceChart } from "@/components/charts/ki-balance-chart";
-import { KiCandleChart } from "@/components/charts/ki-candle-chart";
 import { KiPredictionChart } from "@/components/charts/ki-prediction-chart";
+import { KiTradeChart } from "@/components/charts/ki-trade-chart";
 import { StatSection, StatStrip } from "@/components/charts/stat-tile";
 import { AutoRefresh } from "@/components/layout/auto-refresh";
 import { PageHeader } from "@/components/layout/page-header";
@@ -38,7 +38,7 @@ const LATE_MS = 45 * 60_000;
 
 export default async function KiPage() {
   const supabase = await createClient();
-  const { status, bars, predictions, recent, closed, models } = await fetchKiOverview(supabase);
+  const { status, bars, predictions, recent, chartTrades, closed, models } = await fetchKiOverview(supabase);
 
   if (!status) {
     return (
@@ -118,17 +118,18 @@ export default async function KiPage() {
           ]}
         />
 
-        <StatSection title="Chart" question="Wo hat die KI gehandelt?" hint="M15, Uhrzeit Berlin">
+        <StatSection title="Chart" question="Wo hat die KI gehandelt?" hint="Uhrzeit Berlin">
           <Card>
             <CardHeader>
               <CardTitle>XAUUSD-VIP mit den gedachten Trades</CardTitle>
               <CardDescription>
-                Dreieck: Einstieg in Trade-Richtung · Punkt: Ausstieg · rot gestrichelt: SL · grün gestrichelt: TP. Ein
-                Klick auf ein Dreieck oder einen Trade in der Liste zeigt, warum die KI ihn gesetzt hat.
+                Jeder Trade als Box wie in TradingView: grün bis zum Ziel (TP), rot bis zum Stop (SL), die Linie
+                dazwischen ist der Einstieg. Pfeil: Einstieg, Punkt: Ausstieg mit Ergebnis. Mausrad oder zwei Finger
+                zoomen, Ziehen verschiebt. Ein Klick auf eine Box zeigt, warum die KI den Trade gesetzt hat.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <KiCandleChart bars={bars} trades={recent.map((t) => ({ ...t, href: `/ki/${tradeKey(t)}` }))} />
+              <KiTradeChart bars={bars} trades={chartTrades.map((t) => ({ ...t, href: `/ki/${tradeKey(t)}` }))} />
             </CardContent>
           </Card>
         </StatSection>

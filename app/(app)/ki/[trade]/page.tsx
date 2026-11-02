@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { KiCandleChart } from "@/components/charts/ki-candle-chart";
+import { KiTradeChart } from "@/components/charts/ki-trade-chart";
 import { StatSection, StatStrip } from "@/components/charts/stat-tile";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -62,18 +62,18 @@ export default async function KiTradePage({ params }: PageProps<"/ki/[trade]">) 
           ]}
         />
 
-        <StatSection title="Chart" question="Wo lagen Einstieg, SL und TP?" hint="M15, Uhrzeit Berlin">
+        <StatSection title="Chart" question="Wo lagen Einstieg, SL und TP?" hint="Uhrzeit Berlin">
           <Card>
             <CardHeader>
               <CardTitle>XAUUSD-VIP rund um den Trade</CardTitle>
               <CardDescription>
-                Dreieck: Einstieg in Trade-Richtung · Punkt: Ausstieg · rot gestrichelt: SL · grün gestrichelt: TP ·
-                gepunktet: Einstiegskurs. Die KI entscheidet am Schluss der Signalkerze und steigt zur Eröffnung der
-                nächsten ein.
+                Grün bis zum Ziel (TP), rot bis zum Stop (SL), die Linie dazwischen ist der Einstieg. Die KI entscheidet
+                am Schluss der Signalkerze (Punkt) und steigt zur Eröffnung der nächsten ein (Pfeil). Mausrad oder zwei
+                Finger zoomen, Ziehen verschiebt.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <KiCandleChart bars={bars} trades={[t]} focus={t.signal_at} height={380} />
+              <KiTradeChart bars={bars} trades={[t]} focus={t.signal_at} />
             </CardContent>
           </Card>
         </StatSection>

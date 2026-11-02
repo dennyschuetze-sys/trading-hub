@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   balanceSeries,
-  barIndexAt,
   featureLabel,
   featureValue,
   formatPred,
@@ -13,28 +12,8 @@ import {
   parseReasons,
   parseTradeKey,
   tradeKey,
-  tradeSpan,
   tradeState,
-  type ChartTrade,
 } from "./ki";
-
-/** M15-Kerzen ab 16:00 UTC, eine fehlt (Tagespause wie bei Gold). */
-const bars = ["16:00", "16:15", "16:30", "16:45", "18:00", "18:15"].map((t) => ({ bar_at: `2026-10-29T${t}:00+00:00` }));
-
-const trade = (over: Partial<ChartTrade>): ChartTrade => ({
-  side: "short",
-  signal_at: "2026-10-29T16:00:00+00:00",
-  status: "zu",
-  entry_at: "2026-10-29T16:15:00+00:00",
-  entry_price: 4015,
-  stop_price: 4033,
-  target_price: 3988,
-  exit_at: "2026-10-29T16:45:00+00:00",
-  exit_price: 3988,
-  exit_reason: "Ziel",
-  r_net: 1.48,
-  ...over,
-});
 
 describe("tradeKey", () => {
   it("kodiert Richtung und Signalzeit und liest sie zurück", () => {
@@ -43,47 +22,6 @@ describe("tradeKey", () => {
     expect(parseTradeKey(key)).toEqual({ side: "short", signalAt: "2026-10-29T16:00:00.000Z" });
     expect(parseTradeKey("seitwärts-1793289600")).toBeNull();
     expect(parseTradeKey("long-abc")).toBeNull();
-  });
-});
-
-describe("barIndexAt", () => {
-  it("findet die Kerze, in die ein Zeitpunkt fällt", () => {
-    expect(barIndexAt(bars, "2026-10-29T16:15:00Z")).toBe(1);
-    expect(barIndexAt(bars, "2026-10-29T16:20:00Z")).toBe(1);
-    expect(barIndexAt(bars, "2026-10-29T17:30:00Z")).toBe(3); // in der Pause: zuletzt begonnene Kerze
-    expect(barIndexAt(bars, "2026-10-29T18:29:59Z")).toBe(5);
-  });
-
-  it("liefert null außerhalb der Kerzen", () => {
-    expect(barIndexAt(bars, "2026-10-29T15:59:00Z")).toBeNull();
-    expect(barIndexAt(bars, "2026-10-29T18:30:00Z")).toBeNull();
-    expect(barIndexAt([], "2026-10-29T16:00:00Z")).toBeNull();
-  });
-});
-
-describe("tradeSpan", () => {
-  it("legt Signal, Einstieg, Ausstieg und Linien auf die Kerzen", () => {
-    expect(tradeSpan(bars, trade({}))).toEqual({ signal: 0, entry: 1, exit: 3, lines: [1, 3] });
-  });
-
-  it("zählt einen Ausstieg nach Zeit zur letzten Kerze des Trades", () => {
-    const span = tradeSpan(bars, trade({ exit_reason: "Zeit", exit_at: "2026-10-29T16:45:00+00:00" }));
-    expect(span.exit).toBe(2);
-  });
-
-  it("zieht laufende Trades bis zur letzten Kerze und kennt wartende ohne Linien", () => {
-    expect(tradeSpan(bars, trade({ status: "offen", exit_at: null, exit_reason: null })).lines).toEqual([1, 5]);
-    expect(tradeSpan(bars, trade({ status: "wartet", entry_at: null, exit_at: null, exit_reason: null }))).toEqual({
-      signal: 0,
-      entry: null,
-      exit: null,
-      lines: null,
-    });
-  });
-
-  it("schneidet am Rand ab, wenn der Trade vor den Kerzen begann", () => {
-    const span = tradeSpan(bars, trade({ signal_at: "2026-10-29T15:00:00Z", entry_at: "2026-10-29T15:15:00Z" }));
-    expect(span).toEqual({ signal: null, entry: null, exit: 3, lines: [0, 3] });
   });
 });
 
