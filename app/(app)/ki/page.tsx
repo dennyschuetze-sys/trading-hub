@@ -244,17 +244,21 @@ function tone(value: number | null) {
 function sideTile(status: KiStatus, running: KiTrade[], side: KiSide) {
   const pred = side === "long" ? status.pred_long : status.pred_short;
   const open = running.find((t) => t.side === side);
+  const label = side === "long" ? "Jetzt Long" : "Jetzt Short";
+  // Läuft ein gedachter Trade, zeigt die Kachel dessen Stand; die Vorhersage gilt nur für einen neuen Einstieg
+  if (open?.status === "offen") {
+    return {
+      label,
+      value: formatR(open.r_net),
+      tone: tone(open.r_net),
+      hint: `Trade läuft · neues Signal ${formatPred(pred)}`,
+    };
+  }
   return {
-    label: side === "long" ? "Jetzt Long" : "Jetzt Short",
+    label,
     value: formatPred(pred),
     tone: tone(pred),
-    hint: open
-      ? open.status === "wartet"
-        ? "Signal, Einstieg zur nächsten Kerze"
-        : "gedachter Trade läuft"
-      : isSignal(pred)
-        ? "Signal"
-        : "kein Signal",
+    hint: open ? "Signal, Einstieg zur nächsten Kerze" : isSignal(pred) ? "Signal" : "kein Signal",
   };
 }
 
