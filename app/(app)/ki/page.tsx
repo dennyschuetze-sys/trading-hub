@@ -16,10 +16,13 @@ import {
   goldMarketOpen,
   isSignal,
   isStale,
+  KI_MARKETS,
   parseBand,
   parseImportance,
+  parseMarket,
   tradeKey,
   tradeState,
+  type KiMarket,
   type KiModel,
   type KiSide,
   type KiStatus,
@@ -31,25 +34,32 @@ import { formatDate, formatDateTime, formatNumber, formatR, plural, pnlClass } f
 import { cn } from "@/lib/utils";
 
 const TITLE = "KI-Schattenbetrieb";
-const DESCRIPTION = "Gold M15 · sagt jede Kerze voraus, lernt wöchentlich neu und handelt nicht";
+const DESCRIPTION: Record<KiMarket, string> = {
+  XAUUSD: "Gold M15 · sagt jede Kerze voraus, lernt wöchentlich neu und handelt nicht",
+  NAS100: "NAS100 M15 · Vorwärtsprobe nur Long, eingefrorenes Modell, handelt nicht",
+};
 
 /** Eine Vorhersage gilt als nachgeholt, wenn sie erst lange nach Kerzenschluss gerechnet wurde. */
 const LATE_MS = 45 * 60_000;
 
-export default async function KiPage() {
+export default async function KiPage({ searchParams }: PageProps<"/ki">) {
+  const market = parseMarket((await searchParams).markt);
+  const info = KI_MARKETS[market];
   const supabase = await createClient();
-  const { status, bars, predictions, recent, chartTrades, closed, models } = await fetchKiOverview(supabase);
+  const { status, bars, predictions, recent, chartTrades, closed, models } = await fetchKiOverview(supabase, market);
 
   if (!status) {
     return (
       <>
-        <PageHeader title={TITLE} description={DESCRIPTION} />
+        <PageHeader title={TITLE} description={DESCRIPTION[market]} />
+        <MarketSwitch market={market} />
         <Card>
           <CardHeader>
             <CardTitle>Noch keine Daten</CardTitle>
             <CardDescription>
               Der Schattenbetrieb läuft auf dem Rechner mit dem VT-Terminal (Projekt <code>gold-ki</code>,{" "}
-              <code>scripts/schatten.py lauf</code>) und meldet sich hier alle 15 Minuten.
+              <code>{market === "XAUUSD" ? "scripts/schatten.py" : "scripts/schatten_nas100.py"} lauf</code>) und
+              meldet sich hier alle 15 Minuten.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -65,7 +75,7 @@ export default async function KiPage() {
 
   return (
     <>
-      <PageHeader title={TITLE} description={DESCRIPTION}>
+      <PageHeader title={TITLE} description={DESCRIPTION[market]}>
         <p className="text-xs text-muted-foreground sm:text-right">
           Letzte Kerze {formatDateTime(status.last_bar_at)}
           <br />
@@ -73,6 +83,15 @@ export default async function KiPage() {
         </p>
       </PageHeader>
       <AutoRefresh seconds={60} />
+      <MarketSwitch market={market} />
+
+      {market === "NAS100" && (
+        <p className="mb-6 rounded-lg border px-4 py-3 text-sm text-muted-foreground">
+          Vorwärtsprobe seit 03.11.2026: Das Modell wurde einmal auf NAS100-Kerzen 2018–2026 gelernt und dann
+          eingefroren; es lernt nie neu und handelt nur Long. Nach 500 Trades (etwa 6 Monate) wird abgebrochen, wenn
+          der Schnitt bei −0,07 R oder darunter liegt; ein Urteil gibt es erst nach 3.000 Trades (etwa 3 Jahre).
+        </p>
+      )}
 
       {(stale || status.note) && (
         <p role="status" className="mb-6 rounded-lg border border-loss/40 bg-loss/[0.06] px-4 py-3 text-sm">
@@ -82,14 +101,15 @@ export default async function KiPage() {
         </p>
       )}
       {!stale && !goldMarketOpen(now) && (
-        <p className="mb-6 text-sm text-muted-foreground">Der Goldmarkt ist geschlossen – bis er öffnet, kommen keine neuen Kerzen.</p>
+        <p className="mb-6 text-sm text-muted-foreground">
+          Der Markt ist geschlossen – bis er öffnet, kommen keine neuen Kerzen.
+        </p>
       )}
 
       <div className="grid gap-8">
         <StatStrip
           items={[
-            sideTile(status, running, "long"),
-            sideTile(status, running, "short"),
+            ...info.sides.map((side) => sideTile(status, running, side)),
             {
               label: "Offen",
               value: plural(running.length, "Trade", "Trades"),
@@ -121,7 +141,7 @@ export default async function KiPage() {
         <StatSection title="Chart" question="Wo hat die KI gehandelt?" hint="Uhrzeit Berlin">
           <Card>
             <CardHeader>
-              <CardTitle>XAUUSD-VIP mit den gedachten Trades</CardTitle>
+              <CardTitle>{info.symbol} mit den gedachten Trades</CardTitle>
               <CardDescription>
                 Jeder Trade als Box wie in TradingView: grün bis zum Ziel (TP), rot bis zum Stop (SL), die Linie
                 dazwischen ist der Einstieg. Pfeil: Einstieg, Punkt: Ausstieg mit Ergebnis. Mausrad oder zwei Finger
@@ -129,7 +149,11 @@ export default async function KiPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <KiTradeChart bars={bars} trades={chartTrades.map((t) => ({ ...t, href: `/ki/${tradeKey(t)}` }))} />
+              <KiTradeChart
+                bars={bars}
+                symbol={info.symbol}
+                trades={chartTrades.map((t) => ({ ...t, href: `/ki/${tradeKey(t)}` }))}
+              />
             </CardContent>
           </Card>
         </StatSection>
@@ -144,8 +168,8 @@ export default async function KiPage() {
               <CardTitle>Erwartetes Ergebnis je Kerze</CardTitle>
               <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1">
                 <Dot className="bg-profit" label="Long" />
-                <Dot className="bg-loss" label="Short" />
-                <Dot className="bg-chart-axis/60" label="Goldkurs" />
+                {info.sides.includes("short") && <Dot className="bg-loss" label="Short" />}
+                <Dot className="bg-chart-axis/60" label={market === "XAUUSD" ? "Goldkurs" : "NAS100-Kurs"} />
                 <span>Netto-R nach Spread und Swap. Über der Nulllinie entsteht ein Signal.</span>
               </CardDescription>
             </CardHeader>
@@ -179,7 +203,7 @@ export default async function KiPage() {
             <TradeList trades={recent} />
           </StatSection>
           <StatSection title="Lernen" question="Wann hat sie neu gelernt, und worauf achtet sie?">
-            <ModelTable models={models} active={status.model_version} />
+            <ModelTable models={models} active={status.model_version} market={market} />
           </StatSection>
         </div>
       </div>
@@ -189,6 +213,27 @@ export default async function KiPage() {
         gesicherten Vorteil – die Seite ist zum Zuschauen und Lernen da, nicht als Handelssignal.
       </p>
     </>
+  );
+}
+
+/** Umschaltung zwischen den Märkten; Gold bleibt die Grundadresse /ki. */
+function MarketSwitch({ market }: { market: KiMarket }) {
+  return (
+    <nav aria-label="Markt" className="mb-6 inline-flex rounded-lg border p-1">
+      {(Object.keys(KI_MARKETS) as KiMarket[]).map((m) => (
+        <Link
+          key={m}
+          href={m === "XAUUSD" ? "/ki" : `/ki?markt=${KI_MARKETS[m].slug}`}
+          aria-current={m === market ? "page" : undefined}
+          className={cn(
+            "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+            m === market ? "bg-foreground/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {KI_MARKETS[m].label}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
@@ -267,13 +312,14 @@ function TradeList({ trades }: { trades: KiTrade[] }) {
   );
 }
 
-function ModelTable({ models, active }: { models: KiModel[]; active: string | null }) {
+function ModelTable({ models, active, market }: { models: KiModel[]; active: string | null; market: KiMarket }) {
   return (
     <Card className="gap-2">
       <CardHeader>
         <CardDescription>
-          Prüfung: Rangkorrelation zwischen Vorhersage und Ergebnis der letzten vier Wochen, neues Prüfmodell gegen das
-          bisherige. Übernommen wird nur, wenn das neue mindestens so gut sortiert.
+          {market === "XAUUSD"
+            ? "Prüfung: Rangkorrelation zwischen Vorhersage und Ergebnis der letzten vier Wochen, neues Prüfmodell gegen das bisherige. Übernommen wird nur, wenn das neue mindestens so gut sortiert."
+            : "Ein einziges Modell, vor dem Start eingefroren. Es lernt während der Vorwärtsprobe nie neu, damit sie ehrlich bleibt."}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0">
@@ -315,7 +361,7 @@ function ModelTable({ models, active }: { models: KiModel[]; active: string | nu
                       {m.note && <span className="block max-w-64 text-xs whitespace-normal text-muted-foreground">{m.note}</span>}
                     </TableCell>
                     <TableCell className="pr-6 align-top whitespace-normal">
-                      {(["long", "short"] as const).map((side) => (
+                      {KI_MARKETS[market].sides.map((side) => (
                         <p key={side} className="min-w-64 text-xs">
                           <span className="text-muted-foreground">{side === "long" ? "Long" : "Short"}: </span>
                           {parseImportance(m.importance, side)

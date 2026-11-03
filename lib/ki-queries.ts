@@ -1,5 +1,5 @@
 import "server-only";
-import type { KiBar, KiModel, KiPrediction, KiSide, KiStatus, KiTrade } from "@/lib/ki";
+import type { KiBar, KiMarket, KiModel, KiPrediction, KiSide, KiStatus, KiTrade } from "@/lib/ki";
 import type { createClient } from "@/lib/supabase/server";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -23,19 +23,25 @@ export type KiOverview = {
   models: KiModel[];
 };
 
-/** Alles für die Seite /ki. RLS liefert nur die eigenen Zeilen. */
-export async function fetchKiOverview(supabase: Supabase): Promise<KiOverview> {
+/** Alles für die Seite /ki zu einem Markt. RLS liefert nur die eigenen Zeilen. */
+export async function fetchKiOverview(supabase: Supabase, market: KiMarket): Promise<KiOverview> {
   const [status, bars, predictions, recent, models, closed] = await Promise.all([
-    supabase.from("ki_status").select("*").maybeSingle(),
-    fetchChartBars(supabase),
+    supabase.from("ki_status").select("*").eq("market", market).maybeSingle(),
+    fetchChartBars(supabase, market),
     supabase
       .from("ki_predictions")
       .select("bar_at, close, pred_long, pred_short, made_at")
+      .eq("market", market)
       .order("bar_at", { ascending: false })
       .limit(RECENT_BARS),
-    supabase.from("ki_trades").select("*").order("signal_at", { ascending: false }).limit(RECENT_TRADES),
-    supabase.from("ki_models").select("*").order("trained_at", { ascending: false }).limit(30),
-    fetchClosedTrades(supabase),
+    supabase
+      .from("ki_trades")
+      .select("*")
+      .eq("market", market)
+      .order("signal_at", { ascending: false })
+      .limit(RECENT_TRADES),
+    supabase.from("ki_models").select("*").eq("market", market).order("trained_at", { ascending: false }).limit(30),
+    fetchClosedTrades(supabase, market),
   ]);
   for (const [name, result] of [
     ["Status", status],
@@ -53,6 +59,7 @@ export async function fetchKiOverview(supabase: Supabase): Promise<KiOverview> {
     const { data, error } = await supabase
       .from("ki_trades")
       .select("*")
+      .eq("market", market)
       .gte("signal_at", bars[0].bar_at)
       .order("signal_at", { ascending: false })
       .limit(PAGE);
@@ -72,12 +79,13 @@ export async function fetchKiOverview(supabase: Supabase): Promise<KiOverview> {
 }
 
 /** Die neuesten Kerzen für den Chart, aufsteigend; die Seiten laufen parallel. */
-async function fetchChartBars(supabase: Supabase): Promise<KiBar[]> {
+async function fetchChartBars(supabase: Supabase, market: KiMarket): Promise<KiBar[]> {
   const pages = await Promise.all(
     Array.from({ length: CHART_PAGES }, (_, i) =>
       supabase
         .from("ki_bars")
         .select(BAR_COLUMNS)
+        .eq("market", market)
         .order("bar_at", { ascending: false })
         .range(i * PAGE, (i + 1) * PAGE - 1),
     ),
@@ -98,10 +106,11 @@ async function fetchChartBars(supabase: Supabase): Promise<KiBar[]> {
  * Ein gedachter Trade und die Kerzen von zwei Tagen vor dem Signal bis einen Tag nach dem Ausstieg; der Chart zeigt
  * anfangs acht Stunden davor bis vier danach, der Rest ist zum Verschieben da.
  */
-export async function fetchKiTrade(supabase: Supabase, side: KiSide, signalAt: string) {
+export async function fetchKiTrade(supabase: Supabase, market: KiMarket, side: KiSide, signalAt: string) {
   const { data: trade, error } = await supabase
     .from("ki_trades")
     .select("*")
+    .eq("market", market)
     .eq("side", side)
     .eq("signal_at", signalAt)
     .maybeSingle();
@@ -113,6 +122,7 @@ export async function fetchKiTrade(supabase: Supabase, side: KiSide, signalAt: s
   const { data: bars, error: barsError } = await supabase
     .from("ki_bars")
     .select(BAR_COLUMNS)
+    .eq("market", market)
     .gte("bar_at", from)
     .lte("bar_at", to)
     .order("bar_at")
@@ -122,12 +132,13 @@ export async function fetchKiTrade(supabase: Supabase, side: KiSide, signalAt: s
 }
 
 /** Alle abgeschlossenen Trades für die Bilanzkurve, seitenweise wie bei den COT-Daten. */
-async function fetchClosedTrades(supabase: Supabase) {
+async function fetchClosedTrades(supabase: Supabase, market: KiMarket) {
   const rows: Pick<KiTrade, "signal_at" | "r_net">[] = [];
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await supabase
       .from("ki_trades")
       .select("signal_at, r_net")
+      .eq("market", market)
       .eq("status", "zu")
       .order("signal_at")
       .range(offset, offset + 999);

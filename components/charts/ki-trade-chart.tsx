@@ -309,7 +309,7 @@ function showMarkers(c: Chart) {
 }
 
 /**
- * Kerzenchart von XAUUSD-VIP mit den gedachten Trades der KI, gebaut mit TradingView Lightweight Charts: Mausrad
+ * Kerzenchart eines KI-Markts (XAUUSD-VIP oder NAS100.) mit den gedachten Trades der KI, gebaut mit TradingView Lightweight Charts: Mausrad
  * oder zwei Finger zoomen, Ziehen verschiebt, das Fadenkreuz zeigt Kurs und Uhrzeit (Berlin). Ohne `focus` öffnet ein
  * Klick auf eine Box die Seite des Trades; mit `focus` (Signalzeit) zeigt der Chart diesen Trade samt Umfeld.
  */
@@ -317,11 +317,13 @@ export function KiTradeChart({
   bars,
   trades,
   focus,
+  symbol = "XAUUSD-VIP",
   className = "h-[22rem] sm:h-[28rem]",
 }: {
   bars: KiBar[];
   trades: LinkedTrade[];
   focus?: string;
+  symbol?: string;
   className?: string;
 }) {
   const router = useRouter();
@@ -511,7 +513,7 @@ export function KiTradeChart({
         <div className="pointer-events-none absolute top-1 left-1 z-10 max-w-[calc(100%-5rem)] rounded-md bg-card/80 px-2 py-1 text-[0.6875rem] leading-relaxed tabular-nums backdrop-blur-[2px]">
           {candle && (
             <p className="flex flex-wrap gap-x-2">
-              <span className="font-medium">XAUUSD-VIP · {timeframe}</span>
+              <span className="font-medium">{symbol} · {timeframe}</span>
               {(
                 [
                   ["E", candle.open],

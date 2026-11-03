@@ -837,6 +837,7 @@ export type Database = {
           close: number;
           high: number;
           low: number;
+          market: string;
           open: number;
           user_id: string;
         };
@@ -845,6 +846,7 @@ export type Database = {
           close: number;
           high: number;
           low: number;
+          market?: string;
           open: number;
           user_id: string;
         };
@@ -874,6 +876,7 @@ export type Database = {
           ic_new: number | null;
           ic_old: number | null;
           importance: Json;
+          market: string;
           note: string | null;
           train_rows: number;
           trained_at: string;
@@ -886,6 +889,7 @@ export type Database = {
           ic_new?: number | null;
           ic_old?: number | null;
           importance?: Json;
+          market?: string;
           note?: string | null;
           train_rows: number;
           trained_at: string;
@@ -901,9 +905,10 @@ export type Database = {
           bar_at: string;
           close: number;
           made_at: string;
+          market: string;
           model_version: string;
           pred_long: number;
-          pred_short: number;
+          pred_short: number | null;
           user_id: string;
         };
         Insert: {
@@ -911,9 +916,10 @@ export type Database = {
           bar_at: string;
           close: number;
           made_at: string;
+          market?: string;
           model_version: string;
           pred_long: number;
-          pred_short: number;
+          pred_short: number | null;
           user_id: string;
         };
         Update: Partial<Database["public"]["Tables"]["ki_predictions"]["Insert"]>;
@@ -925,6 +931,7 @@ export type Database = {
           last_bar_at: string | null;
           last_close: number | null;
           live_since: string | null;
+          market: string;
           mean_r: number | null;
           model_version: string | null;
           note: string | null;
@@ -942,6 +949,7 @@ export type Database = {
           last_bar_at?: string | null;
           last_close?: number | null;
           live_since?: string | null;
+          market?: string;
           mean_r?: number | null;
           model_version?: string | null;
           note?: string | null;
@@ -964,6 +972,7 @@ export type Database = {
           exit_at: string | null;
           exit_price: number | null;
           exit_reason: string | null;
+          market: string;
           model_version: string;
           pred: number;
           r_gross: number | null;
@@ -983,6 +992,7 @@ export type Database = {
           exit_at?: string | null;
           exit_price?: number | null;
           exit_reason?: string | null;
+          market?: string;
           model_version: string;
           pred: number;
           r_gross?: number | null;

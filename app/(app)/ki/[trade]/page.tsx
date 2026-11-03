@@ -6,7 +6,17 @@ import { StatSection, StatStrip } from "@/components/charts/stat-tile";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { featureLabel, featureValue, formatPred, parseReasons, parseTradeKey, tradeState, type KiTrade, type Reasons } from "@/lib/ki";
+import {
+  featureLabel,
+  featureValue,
+  formatPred,
+  KI_MARKETS,
+  parseReasons,
+  parseTradeKey,
+  tradeState,
+  type KiTrade,
+  type Reasons,
+} from "@/lib/ki";
 import { fetchKiTrade } from "@/lib/ki-queries";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatNumber, formatR, pnlClass } from "@/lib/trading";
@@ -18,20 +28,26 @@ export default async function KiTradePage({ params }: PageProps<"/ki/[trade]">) 
   const parsed = parseTradeKey(key);
   if (!parsed) notFound();
   const supabase = await createClient();
-  const result = await fetchKiTrade(supabase, parsed.side, parsed.signalAt);
+  const result = await fetchKiTrade(supabase, parsed.market, parsed.side, parsed.signalAt);
   if (!result) notFound();
 
   const { trade: t, bars } = result;
   const side = t.side === "long" ? "Long" : "Short";
   const reasons = parseReasons(t.reasons);
+  const market = KI_MARKETS[parsed.market];
+  const back = parsed.market === "XAUUSD" ? "/ki" : `/ki?markt=${market.slug}`;
+  const unit = parsed.market === "XAUUSD" ? "USD" : "Punkte";
   const distance = (price: number | null) =>
-    t.entry_price != null && price != null ? `${formatNumber(Math.abs(price - t.entry_price), 2)} USD` : undefined;
+    t.entry_price != null && price != null ? `${formatNumber(Math.abs(price - t.entry_price), 2)} ${unit}` : undefined;
 
   return (
     <>
-      <PageHeader title={`${side} · Signal ${formatDateTime(t.signal_at)}`} description={`Gedachter Trade der KI, ${tradeState(t)} · Modell ${t.model_version}`}>
+      <PageHeader
+        title={`${market.label} ${side} · Signal ${formatDateTime(t.signal_at)}`}
+        description={`Gedachter Trade der KI, ${tradeState(t)} · Modell ${t.model_version}`}
+      >
         <Button variant="outline" asChild>
-          <Link href="/ki">
+          <Link href={back}>
             <ArrowLeft className="size-4" /> KI-Schattenbetrieb
           </Link>
         </Button>
@@ -65,7 +81,7 @@ export default async function KiTradePage({ params }: PageProps<"/ki/[trade]">) 
         <StatSection title="Chart" question="Wo lagen Einstieg, SL und TP?" hint="Uhrzeit Berlin">
           <Card>
             <CardHeader>
-              <CardTitle>XAUUSD-VIP rund um den Trade</CardTitle>
+              <CardTitle>{market.symbol} rund um den Trade</CardTitle>
               <CardDescription>
                 Grün bis zum Ziel (TP), rot bis zum Stop (SL), die Linie dazwischen ist der Einstieg. Die KI entscheidet
                 am Schluss der Signalkerze (Punkt) und steigt zur Eröffnung der nächsten ein (Pfeil). Mausrad oder zwei
@@ -73,7 +89,7 @@ export default async function KiTradePage({ params }: PageProps<"/ki/[trade]">) 
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <KiTradeChart bars={bars} trades={[t]} focus={t.signal_at} />
+              <KiTradeChart bars={bars} trades={[t]} focus={t.signal_at} symbol={market.symbol} />
             </CardContent>
           </Card>
         </StatSection>
@@ -91,7 +107,10 @@ function ReasonsCard({ trade, reasons }: { trade: KiTrade; reasons: Reasons | nu
     return (
       <Card>
         <CardHeader>
-          <CardDescription>Für diesen Trade liegen keine Gründe vor.</CardDescription>
+          <CardDescription>
+            Für diesen Trade liegen keine Gründe vor.
+            {trade.market === "NAS100" && " Die Vorwärtsprobe NAS100 speichert keine Gründe je Signal."}
+          </CardDescription>
         </CardHeader>
       </Card>
     );

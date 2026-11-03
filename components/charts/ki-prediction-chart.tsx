@@ -20,7 +20,8 @@ export function KiPredictionChart({ predictions, height = 280 }: { predictions: 
   }
 
   const data = predictions.map((p, index) => ({ ...p, index }));
-  const values = data.flatMap((d) => [d.pred_long, d.pred_short]);
+  // NAS100 sagt nur Long voraus: pred_short ist dort leer
+  const values = data.flatMap((d) => [d.pred_long, d.pred_short]).filter((v): v is number => v != null);
   const ticks = niceTicks(Math.min(...values, 0), Math.max(...values, 0));
 
   // X-Achse: neuer Tag mit Datum, sonst Uhrzeit; höchstens acht Beschriftungen
@@ -38,7 +39,7 @@ export function KiPredictionChart({ predictions, height = 280 }: { predictions: 
     <div
       style={{ height }}
       role="img"
-      aria-label={`Erwartetes Netto-R je Kerze, zuletzt Long ${formatPred(latest.pred_long)} und Short ${formatPred(latest.pred_short)}`}
+      aria-label={`Erwartetes Netto-R je Kerze, zuletzt Long ${formatPred(latest.pred_long)}${latest.pred_short == null ? "" : ` und Short ${formatPred(latest.pred_short)}`}`}
     >
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -74,9 +75,9 @@ export function KiPredictionChart({ predictions, height = 280 }: { predictions: 
               if (!active || !p) return null;
               return (
                 <ChartTooltipBox
-                  value={`Long ${formatPred(p.pred_long)} · Short ${formatPred(p.pred_short)}`}
+                  value={`Long ${formatPred(p.pred_long)}${p.pred_short == null ? "" : ` · Short ${formatPred(p.pred_short)}`}`}
                   label={formatDateTime(p.bar_at)}
-                  detail={`Gold ${formatNumber(p.close, 2)}`}
+                  detail={`Kurs ${formatNumber(p.close, 2)}`}
                 />
               );
             }}

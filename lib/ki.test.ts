@@ -10,6 +10,7 @@ import {
   parseBand,
   parseImportance,
   parseReasons,
+  parseMarket,
   parseTradeKey,
   tradeKey,
   tradeState,
@@ -19,9 +20,26 @@ describe("tradeKey", () => {
   it("kodiert Richtung und Signalzeit und liest sie zurück", () => {
     const key = tradeKey({ side: "short", signal_at: "2026-10-29T16:00:00+00:00" });
     expect(key).toBe("short-1793289600");
-    expect(parseTradeKey(key)).toEqual({ side: "short", signalAt: "2026-10-29T16:00:00.000Z" });
+    expect(parseTradeKey(key)).toEqual({ market: "XAUUSD", side: "short", signalAt: "2026-10-29T16:00:00.000Z" });
     expect(parseTradeKey("seitwärts-1793289600")).toBeNull();
     expect(parseTradeKey("long-abc")).toBeNull();
+  });
+
+  it("setzt den Markt NAS100 davor, Gold bleibt ohne", () => {
+    const key = tradeKey({ market: "NAS100", side: "long", signal_at: "2026-11-03T10:00:00+00:00" });
+    expect(key).toBe("nas100-long-1793700000");
+    expect(parseTradeKey(key)).toEqual({ market: "NAS100", side: "long", signalAt: "2026-11-03T10:00:00.000Z" });
+    expect(tradeKey({ market: "XAUUSD", side: "long", signal_at: "2026-11-03T10:00:00+00:00" })).toBe("long-1793700000");
+    expect(parseTradeKey("gold-long-1793700000")).toBeNull();
+  });
+});
+
+describe("parseMarket", () => {
+  it("liest ?markt= und fällt auf Gold zurück", () => {
+    expect(parseMarket("nas100")).toBe("NAS100");
+    expect(parseMarket("gold")).toBe("XAUUSD");
+    expect(parseMarket(undefined)).toBe("XAUUSD");
+    expect(parseMarket(["nas100"])).toBe("XAUUSD");
   });
 });
 
