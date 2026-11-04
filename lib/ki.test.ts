@@ -32,12 +32,19 @@ describe("tradeKey", () => {
     expect(tradeKey({ market: "XAUUSD", side: "long", signal_at: "2026-11-03T10:00:00+00:00" })).toBe("long-1793700000");
     expect(parseTradeKey("gold-long-1793700000")).toBeNull();
   });
+
+  it("kennt Gold M5", () => {
+    const key = tradeKey({ market: "XAUUSD-M5", side: "short", signal_at: "2026-11-04T08:05:00+00:00" });
+    expect(key).toBe("gold-m5-short-1793779500");
+    expect(parseTradeKey(key)).toEqual({ market: "XAUUSD-M5", side: "short", signalAt: "2026-11-04T08:05:00.000Z" });
+  });
 });
 
 describe("parseMarket", () => {
   it("liest ?markt= und fällt auf Gold zurück", () => {
     expect(parseMarket("nas100")).toBe("NAS100");
     expect(parseMarket("gold")).toBe("XAUUSD");
+    expect(parseMarket("gold-m5")).toBe("XAUUSD-M5");
     expect(parseMarket(undefined)).toBe("XAUUSD");
     expect(parseMarket(["nas100"])).toBe("XAUUSD");
   });
@@ -201,5 +208,6 @@ describe("tradeState", () => {
     expect(tradeState({ status: "offen", exit_reason: null })).toBe("läuft");
     expect(tradeState({ status: "zu", exit_reason: "Ziel" })).toBe("Ziel erreicht");
     expect(tradeState({ status: "zu", exit_reason: "Zeit" })).toBe("nach 12 Stunden beendet");
+    expect(tradeState({ status: "zu", exit_reason: "Zeit", market: "XAUUSD-M5" })).toBe("nach 4 Stunden beendet");
   });
 });

@@ -45,7 +45,7 @@ import { cn } from "@/lib/utils";
 export type LinkedTrade = ChartTrade & { href?: string };
 
 /** Pixel je Kerze zu Beginn: in M15 auf dem Handy gut 40 Kerzen, am Rechner gut 130 */
-const START_SPACING: Record<Timeframe, number> = { M15: 6, H1: 8, H4: 12 };
+const START_SPACING: Record<Timeframe, number> = { M5: 6, M15: 6, H1: 8, H4: 12 };
 /** Pixel je Viertelstunde, ab denen die Marker ihren Text bekommen; darunter überlagern sich die Beschriftungen */
 const TEXT_SPACING = 5;
 const HOUR = 3_600_000;
@@ -318,12 +318,15 @@ export function KiTradeChart({
   trades,
   focus,
   symbol = "XAUUSD-VIP",
+  timeframes = ["M15", "H1", "H4"],
   className = "h-[22rem] sm:h-[28rem]",
 }: {
   bars: KiBar[];
   trades: LinkedTrade[];
   focus?: string;
   symbol?: string;
+  /** wählbare Zeitrahmen, der erste ist der der gemeldeten Kerzen */
+  timeframes?: Timeframe[];
   className?: string;
 }) {
   const router = useRouter();
@@ -332,7 +335,7 @@ export function KiTradeChart({
   const chartRef = useRef<Chart | null>(null);
   /** Zeitrahmen und Kerzenzahl beim letzten Zeichnen: entscheidet, ob der Ausschnitt neu gesetzt wird */
   const shownRef = useRef<{ timeframe: Timeframe; count: number } | null>(null);
-  const [timeframe, setTimeframe] = useState<Timeframe>("M15");
+  const [timeframe, setTimeframe] = useState<Timeframe>(timeframes[0]);
   const [hover, setHover] = useState<{ index: number | null; key: string | null }>({ index: null, key: null });
 
   const candles = useMemo(() => aggregateBars(bars, timeframe), [bars, timeframe]);
@@ -475,7 +478,7 @@ export function KiTradeChart({
     <div className="grid gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex rounded-lg border bg-background/60 p-0.5" role="group" aria-label="Zeitrahmen">
-          {(Object.keys(TIMEFRAMES) as Timeframe[]).map((tf) => (
+          {timeframes.map((tf) => (
             <button
               key={tf}
               type="button"

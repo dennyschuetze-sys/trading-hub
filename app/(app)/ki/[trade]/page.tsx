@@ -36,7 +36,7 @@ export default async function KiTradePage({ params }: PageProps<"/ki/[trade]">) 
   const reasons = parseReasons(t.reasons);
   const market = KI_MARKETS[parsed.market];
   const back = parsed.market === "XAUUSD" ? "/ki" : `/ki?markt=${market.slug}`;
-  const unit = parsed.market === "XAUUSD" ? "USD" : "Punkte";
+  const unit = parsed.market === "NAS100" ? "Punkte" : "USD";
   const distance = (price: number | null) =>
     t.entry_price != null && price != null ? `${formatNumber(Math.abs(price - t.entry_price), 2)} ${unit}` : undefined;
 
@@ -66,7 +66,7 @@ export default async function KiTradePage({ params }: PageProps<"/ki/[trade]">) 
             {
               label: "Ausstieg",
               value: t.status === "zu" ? formatNumber(t.exit_price, 2) : t.status === "offen" ? "läuft" : "–",
-              hint: t.exit_at ? `${t.exit_reason} · ${formatDateTime(t.exit_at)}` : "spätestens nach 12 Stunden",
+              hint: t.exit_at ? `${t.exit_reason} · ${formatDateTime(t.exit_at)}` : `spätestens nach ${market.hold}`,
             },
             {
               label: t.status === "offen" ? "Stand jetzt" : "Ergebnis",
@@ -89,7 +89,7 @@ export default async function KiTradePage({ params }: PageProps<"/ki/[trade]">) 
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <KiTradeChart bars={bars} trades={[t]} focus={t.signal_at} symbol={market.symbol} />
+              <KiTradeChart bars={bars} trades={[t]} focus={t.signal_at} symbol={market.symbol} timeframes={market.timeframes} />
             </CardContent>
           </Card>
         </StatSection>
@@ -110,6 +110,7 @@ function ReasonsCard({ trade, reasons }: { trade: KiTrade; reasons: Reasons | nu
           <CardDescription>
             Für diesen Trade liegen keine Gründe vor.
             {trade.market === "NAS100" && " Die Vorwärtsprobe NAS100 speichert keine Gründe je Signal."}
+            {trade.market === "XAUUSD-M5" && " Der Schattenbetrieb Gold M5 speichert keine Gründe je Signal."}
           </CardDescription>
         </CardHeader>
       </Card>

@@ -1,20 +1,47 @@
 import type { Json, Tables } from "@/lib/database.types";
+import type { Timeframe } from "@/lib/ki-chart";
 import { formatNumber } from "@/lib/trading";
 
 // KI-Schattenbetrieb: Die Gold-KI aus dem Projekt gold-ki (scripts/schatten.py) sagt jede M15-Kerze von XAUUSD
 // voraus, rechnet gedachte Trades ab und lernt wöchentlich neu. Sie handelt nicht; geschrieben wird über ki_ingest().
-// Daneben läuft seit 03.11.2026 die Vorwärtsprobe NAS100 Long (scripts/schatten_nas100.py, eingefrorenes Modell).
+// Daneben läuft seit 03.11.2026 die Vorwärtsprobe NAS100 Long (scripts/schatten_nas100.py, eingefrorenes Modell)
+// und seit 04.11.2026 Gold auf M5 (scripts/schatten_m5.py, eingefrorene Modelle, Trades höchstens 4 Stunden).
 
-export type KiMarket = "XAUUSD" | "NAS100";
+export type KiMarket = "XAUUSD" | "NAS100" | "XAUUSD-M5";
 
-export const KI_MARKETS: Record<KiMarket, { slug: string; label: string; symbol: string; sides: KiSide[] }> = {
-  XAUUSD: { slug: "gold", label: "Gold", symbol: "XAUUSD-VIP", sides: ["long", "short"] },
-  NAS100: { slug: "nas100", label: "NAS100", symbol: "NAS100.", sides: ["long"] },
+export const KI_MARKETS: Record<
+  KiMarket,
+  { slug: string; label: string; symbol: string; sides: KiSide[]; timeframes: Timeframe[]; hold: string }
+> = {
+  XAUUSD: {
+    slug: "gold",
+    label: "Gold",
+    symbol: "XAUUSD-VIP",
+    sides: ["long", "short"],
+    timeframes: ["M15", "H1", "H4"],
+    hold: "12 Stunden",
+  },
+  NAS100: {
+    slug: "nas100",
+    label: "NAS100",
+    symbol: "NAS100.",
+    sides: ["long"],
+    timeframes: ["M15", "H1", "H4"],
+    hold: "12 Stunden",
+  },
+  "XAUUSD-M5": {
+    slug: "gold-m5",
+    label: "Gold M5",
+    symbol: "XAUUSD-VIP",
+    sides: ["long", "short"],
+    timeframes: ["M5", "M15", "H1"],
+    hold: "4 Stunden",
+  },
 };
 
 /** Markt aus ?markt=…; ohne oder unbekannt: Gold. */
 export function parseMarket(value: string | string[] | undefined): KiMarket {
-  return value === KI_MARKETS.NAS100.slug ? "NAS100" : "XAUUSD";
+  return (Object.keys(KI_MARKETS) as KiMarket[]).find((m) => KI_MARKETS[m].slug === value) ?? "XAUUSD";
 }
 
 export type KiStatus = Tables<"ki_status">;
@@ -222,18 +249,19 @@ function bandAt(band: BandPoint[], n: number): Omit<BandPoint, "n"> | null {
 
 /**
  * URL-Schlüssel eines gedachten Trades: Richtung und Signalzeit in Sekunden, z. B. „short-1793289600“; außer bei
- * Gold mit dem Markt davor, z. B. „nas100-long-1793289600“.
+ * Gold mit dem Markt davor, z. B. „nas100-long-1793289600“ oder „gold-m5-short-1793289600“.
  */
 export function tradeKey(trade: Pick<KiTrade, "side" | "signal_at"> & { market?: string }) {
-  const prefix = trade.market === "NAS100" ? `${KI_MARKETS.NAS100.slug}-` : "";
+  const market = KI_MARKETS[trade.market as KiMarket];
+  const prefix = market && trade.market !== "XAUUSD" ? `${market.slug}-` : "";
   return `${prefix}${trade.side}-${Math.round(Date.parse(trade.signal_at) / 1000)}`;
 }
 
 export function parseTradeKey(key: string): { market: KiMarket; side: KiSide; signalAt: string } | null {
-  const match = /^(?:(nas100)-)?(long|short)-(\d{9,11})$/.exec(key);
+  const match = /^(?:(nas100|gold-m5)-)?(long|short)-(\d{9,11})$/.exec(key);
   if (!match) return null;
   return {
-    market: match[1] ? "NAS100" : "XAUUSD",
+    market: match[1] ? parseMarket(match[1]) : "XAUUSD",
     side: match[2] as KiSide,
     signalAt: new Date(Number(match[3]) * 1000).toISOString(),
   };
@@ -263,8 +291,9 @@ export function parseReasons(json: Json): Reasons | null {
 }
 
 /** Kurzbeschreibung des Stands eines gedachten Trades. */
-export function tradeState(trade: Pick<KiTrade, "status" | "exit_reason">) {
+export function tradeState(trade: Pick<KiTrade, "status" | "exit_reason"> & { market?: string }) {
   if (trade.status === "wartet") return "wartet auf den Einstieg";
   if (trade.status === "offen") return "läuft";
-  return trade.exit_reason === "Ziel" ? "Ziel erreicht" : trade.exit_reason === "Stop" ? "Stop" : "nach 12 Stunden beendet";
+  const hold = KI_MARKETS[trade.market as KiMarket]?.hold ?? KI_MARKETS.XAUUSD.hold;
+  return trade.exit_reason === "Ziel" ? "Ziel erreicht" : trade.exit_reason === "Stop" ? "Stop" : `nach ${hold} beendet`;
 }

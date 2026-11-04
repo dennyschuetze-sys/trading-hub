@@ -37,6 +37,12 @@ const TITLE = "KI-Schattenbetrieb";
 const DESCRIPTION: Record<KiMarket, string> = {
   XAUUSD: "Gold M15 · sagt jede Kerze voraus, lernt wöchentlich neu und handelt nicht",
   NAS100: "NAS100 M15 · Vorwärtsprobe nur Long, eingefrorenes Modell, handelt nicht",
+  "XAUUSD-M5": "Gold M5 · Long und Short, eingefrorene Modelle, Trades höchstens 4 Stunden, handelt nicht",
+};
+const SCRIPT: Record<KiMarket, string> = {
+  XAUUSD: "scripts/schatten.py",
+  NAS100: "scripts/schatten_nas100.py",
+  "XAUUSD-M5": "scripts/schatten_m5.py",
 };
 
 /** Eine Vorhersage gilt als nachgeholt, wenn sie erst lange nach Kerzenschluss gerechnet wurde. */
@@ -58,8 +64,8 @@ export default async function KiPage({ searchParams }: PageProps<"/ki">) {
             <CardTitle>Noch keine Daten</CardTitle>
             <CardDescription>
               Der Schattenbetrieb läuft auf dem Rechner mit dem VT-Terminal (Projekt <code>gold-ki</code>,{" "}
-              <code>{market === "XAUUSD" ? "scripts/schatten.py" : "scripts/schatten_nas100.py"} lauf</code>) und
-              meldet sich hier alle 15 Minuten.
+              <code>{SCRIPT[market]} lauf</code>) und meldet sich hier
+              alle {market === "XAUUSD-M5" ? 5 : 15} Minuten.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -90,6 +96,14 @@ export default async function KiPage({ searchParams }: PageProps<"/ki">) {
           Vorwärtsprobe seit 03.11.2026: Das Modell wurde einmal auf NAS100-Kerzen 2018–2026 gelernt und dann
           eingefroren; es lernt nie neu und handelt nur Long. Nach 500 Trades (etwa 6 Monate) wird abgebrochen, wenn
           der Schnitt bei −0,07 R oder darunter liegt; ein Urteil gibt es erst nach 3.000 Trades (etwa 3 Jahre).
+        </p>
+      )}
+      {market === "XAUUSD-M5" && (
+        <p className="mb-6 rounded-lg border px-4 py-3 text-sm text-muted-foreground">
+          Schattenbetrieb seit 04.11.2026 zum Zuschauen: Im Test 2013–2026 war M5 nach Kosten leicht negativ (−0,02 R je
+          Trade), weil der Spread beim kleinen Stop schwer wiegt. Die Modelle wurden einmal gelernt und eingefroren. Nach
+          1.000 Trades wird abgebrochen, wenn der Schnitt bei −0,07 R oder darunter liegt; ein Urteil gibt es nach
+          3.000 Trades.
         </p>
       )}
 
@@ -152,6 +166,7 @@ export default async function KiPage({ searchParams }: PageProps<"/ki">) {
               <KiTradeChart
                 bars={bars}
                 symbol={info.symbol}
+                timeframes={info.timeframes}
                 trades={chartTrades.map((t) => ({ ...t, href: `/ki/${tradeKey(t)}` }))}
               />
             </CardContent>
@@ -169,7 +184,7 @@ export default async function KiPage({ searchParams }: PageProps<"/ki">) {
               <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1">
                 <Dot className="bg-profit" label="Long" />
                 {info.sides.includes("short") && <Dot className="bg-loss" label="Short" />}
-                <Dot className="bg-chart-axis/60" label={market === "XAUUSD" ? "Goldkurs" : "NAS100-Kurs"} />
+                <Dot className="bg-chart-axis/60" label={market === "NAS100" ? "NAS100-Kurs" : "Goldkurs"} />
                 <span>Netto-R nach Spread und Swap. Über der Nulllinie entsteht ein Signal.</span>
               </CardDescription>
             </CardHeader>
@@ -323,7 +338,9 @@ function ModelTable({ models, active, market }: { models: KiModel[]; active: str
         <CardDescription>
           {market === "XAUUSD"
             ? "Prüfung: Rangkorrelation zwischen Vorhersage und Ergebnis der letzten vier Wochen, neues Prüfmodell gegen das bisherige. Übernommen wird nur, wenn das neue mindestens so gut sortiert."
-            : "Ein einziges Modell, vor dem Start eingefroren. Es lernt während der Vorwärtsprobe nie neu, damit sie ehrlich bleibt."}
+            : market === "NAS100"
+              ? "Ein einziges Modell, vor dem Start eingefroren. Es lernt während der Vorwärtsprobe nie neu, damit sie ehrlich bleibt."
+              : "Je ein Modell für Long und Short, vor dem Start auf Gold M5 2010–2026 gelernt und eingefroren. Sie lernen nie neu, damit das Ergebnis ehrlich bleibt."}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0">

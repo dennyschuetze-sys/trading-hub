@@ -4,7 +4,7 @@ import { TIME_ZONE } from "@/lib/trading";
 // Kerzenchart der gedachten Trades (components/charts/ki-trade-chart.tsx): Zeitrahmen, Uhrzeit Berlin und wo ein
 // Trade auf den Kerzen liegt. Ohne die Chart-Bibliothek, damit es testbar bleibt.
 
-export const TIMEFRAMES = { M15: 15, H1: 60, H4: 240 } as const;
+export const TIMEFRAMES = { M5: 5, M15: 15, H1: 60, H4: 240 } as const;
 export type Timeframe = keyof typeof TIMEFRAMES;
 
 const MINUTE = 60_000;
@@ -62,7 +62,7 @@ function candleStart(ms: number, timeframe: Timeframe) {
   return Math.floor((ms + shift) / size) * size - shift;
 }
 
-/** Fasst die M15-Kerzen (aufsteigend sortiert) zum Zeitrahmen zusammen. */
+/** Fasst die gemeldeten Kerzen (M15 oder M5, aufsteigend sortiert) zum Zeitrahmen zusammen. */
 export function aggregateBars(bars: KiBar[], timeframe: Timeframe): ChartCandle[] {
   const size = TIMEFRAMES[timeframe] * MINUTE;
   const candles: ChartCandle[] = [];
