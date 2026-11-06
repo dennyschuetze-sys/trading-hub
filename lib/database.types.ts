@@ -1009,6 +1009,136 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["ki_trades"]["Insert"]>;
         Relationships: [];
       };
+      ea_ingest_tokens: {
+        Row: { token_hash: string; user_id: string; label: string; created_at: string };
+        Insert: { token_hash: string; user_id: string; label?: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["ea_ingest_tokens"]["Insert"]>;
+        Relationships: [];
+      };
+      ea_accounts: {
+        Row: {
+          algo_trading: boolean;
+          balance: number;
+          connected: boolean;
+          currency: string;
+          equity: number;
+          expert: string;
+          live_since: string;
+          login: number;
+          name: string;
+          note: string | null;
+          open_positions: number;
+          run_at: string;
+          settings: Json;
+          start_balance: number;
+          symbol: string;
+          tag: string;
+          timeframe: string;
+          user_id: string;
+        };
+        Insert: {
+          algo_trading: boolean;
+          balance: number;
+          connected: boolean;
+          currency: string;
+          equity: number;
+          expert: string;
+          live_since: string;
+          login: number;
+          name: string;
+          note?: string | null;
+          open_positions?: number;
+          run_at: string;
+          settings?: Json;
+          start_balance: number;
+          symbol: string;
+          tag: string;
+          timeframe: string;
+          user_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ea_accounts"]["Insert"]>;
+        Relationships: [];
+      };
+      ea_positions: {
+        Row: {
+          close_price: number | null;
+          closed_at: string | null;
+          open_price: number;
+          opened_at: string;
+          pips: number | null;
+          position_id: number;
+          profit: number;
+          side: string;
+          status: string;
+          strategy: string | null;
+          tag: string;
+          updated_at: string;
+          user_id: string;
+          volume: number;
+        };
+        Insert: {
+          close_price?: number | null;
+          closed_at?: string | null;
+          open_price: number;
+          opened_at: string;
+          pips?: number | null;
+          position_id: number;
+          profit: number;
+          side: string;
+          status: string;
+          strategy?: string | null;
+          tag: string;
+          updated_at?: string;
+          user_id: string;
+          volume: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["ea_positions"]["Insert"]>;
+        Relationships: [];
+      };
+      ea_forecast: {
+        Row: {
+          day: string;
+          events: Json;
+          family: string;
+          made_at: string;
+          probability: number;
+          sample_days: number;
+          user_id: string;
+        };
+        Insert: {
+          day: string;
+          events?: Json;
+          family: string;
+          made_at: string;
+          probability: number;
+          sample_days: number;
+          user_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ea_forecast"]["Insert"]>;
+        Relationships: [];
+      };
+      ea_status: {
+        Row: {
+          backtest: Json;
+          calendar_at: string | null;
+          calendar_until: string | null;
+          families: Json;
+          note: string | null;
+          run_at: string;
+          user_id: string;
+        };
+        Insert: {
+          backtest?: Json;
+          calendar_at?: string | null;
+          calendar_until?: string | null;
+          families?: Json;
+          note?: string | null;
+          run_at: string;
+          user_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ea_status"]["Insert"]>;
+        Relationships: [];
+      };
       market_days: {
         Row: {
           user_id: string;
@@ -1055,6 +1185,10 @@ export type Database = {
     Views: { [_ in never]: never };
     Functions: {
       ki_ingest: {
+        Args: { p_token: string; p_payload: Json };
+        Returns: undefined;
+      };
+      ea_ingest: {
         Args: { p_token: string; p_payload: Json };
         Returns: undefined;
       };
