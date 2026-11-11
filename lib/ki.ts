@@ -16,11 +16,19 @@ export const KI_MARKETS: Record<
 > = {
   XAUUSD: {
     slug: "gold",
-    label: "Gold",
+    label: "Gold M15",
     symbol: "XAUUSD-VIP",
     sides: ["long", "short"],
     timeframes: ["M15", "H1", "H4"],
     hold: "12 Stunden",
+  },
+  "XAUUSD-M5": {
+    slug: "gold-m5",
+    label: "Gold M5",
+    symbol: "XAUUSD-VIP",
+    sides: ["long", "short"],
+    timeframes: ["M5", "M15", "H1"],
+    hold: "4 Stunden",
   },
   NAS100: {
     slug: "nas100",
@@ -37,14 +45,6 @@ export const KI_MARKETS: Record<
     sides: ["long"],
     timeframes: ["M15", "H1", "H4"],
     hold: "12 Stunden",
-  },
-  "XAUUSD-M5": {
-    slug: "gold-m5",
-    label: "Gold M5",
-    symbol: "XAUUSD-VIP",
-    sides: ["long", "short"],
-    timeframes: ["M5", "M15", "H1"],
-    hold: "4 Stunden",
   },
 };
 
