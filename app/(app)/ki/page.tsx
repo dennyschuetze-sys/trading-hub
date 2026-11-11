@@ -37,7 +37,7 @@ const TITLE = "KI-Schattenbetrieb";
 const DESCRIPTION: Record<KiMarket, string> = {
   XAUUSD: "Gold M15 · sagt jede Kerze voraus, lernt wöchentlich neu und handelt nicht",
   NAS100: "NAS100 M15 · Vorwärtsprobe nur Long, eingefrorenes Modell, handelt nicht",
-  "XAUUSD-M5": "Gold M5 · Long und Short, eingefrorene Modelle, Trades höchstens 4 Stunden, handelt nicht",
+  "XAUUSD-M5": "Gold M5 · Long und Short, lernt wöchentlich neu, Trades höchstens 4 Stunden, handelt nicht",
 };
 const SCRIPT: Record<KiMarket, string> = {
   XAUUSD: "scripts/schatten.py",
@@ -101,9 +101,9 @@ export default async function KiPage({ searchParams }: PageProps<"/ki">) {
       {market === "XAUUSD-M5" && (
         <p className="mb-6 rounded-lg border px-4 py-3 text-sm text-muted-foreground">
           Schattenbetrieb seit 04.11.2026 zum Zuschauen: Im Test 2013–2026 war M5 nach Kosten leicht negativ (−0,02 R je
-          Trade), weil der Spread beim kleinen Stop schwer wiegt. Die Modelle wurden einmal gelernt und eingefroren. Nach
-          1.000 Trades wird abgebrochen, wenn der Schnitt bei −0,07 R oder darunter liegt; ein Urteil gibt es nach
-          3.000 Trades.
+          Trade), weil der Spread beim kleinen Stop schwer wiegt. Seit 11.11.2026 lernt es wie Gold M15 jeden Samstag neu
+          (bis dahin eingefroren, Modell m5-v1). Nach 1.000 Trades wird abgebrochen, wenn der Schnitt bei −0,07 R oder
+          darunter liegt; ein Urteil gibt es nach 3.000 Trades.
         </p>
       )}
 
@@ -336,11 +336,9 @@ function ModelTable({ models, active, market }: { models: KiModel[]; active: str
     <Card className="gap-2">
       <CardHeader>
         <CardDescription>
-          {market === "XAUUSD"
-            ? "Prüfung: Rangkorrelation zwischen Vorhersage und Ergebnis der letzten vier Wochen, neues Prüfmodell gegen das bisherige. Übernommen wird nur, wenn das neue mindestens so gut sortiert."
-            : market === "NAS100"
-              ? "Ein einziges Modell, vor dem Start eingefroren. Es lernt während der Vorwärtsprobe nie neu, damit sie ehrlich bleibt."
-              : "Je ein Modell für Long und Short, vor dem Start auf Gold M5 2010–2026 gelernt und eingefroren. Sie lernen nie neu, damit das Ergebnis ehrlich bleibt."}
+          {market === "NAS100"
+            ? "Ein einziges Modell, vor dem Start eingefroren. Es lernt während der Vorwärtsprobe nie neu, damit sie ehrlich bleibt."
+            : "Prüfung: Rangkorrelation zwischen Vorhersage und Ergebnis der letzten vier Wochen, neues Prüfmodell gegen das bisherige. Übernommen wird nur, wenn das neue mindestens so gut sortiert."}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0">
