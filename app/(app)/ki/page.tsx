@@ -37,11 +37,13 @@ const TITLE = "KI-Schattenbetrieb";
 const DESCRIPTION: Record<KiMarket, string> = {
   XAUUSD: "Gold M15 · sagt jede Kerze voraus, lernt wöchentlich neu und handelt nicht",
   NAS100: "NAS100 M15 · Vorwärtsprobe nur Long, eingefrorenes Modell, handelt nicht",
+  "NAS100-L": "NAS100 M15 · nur Long, lernt wöchentlich neu, handelt nicht",
   "XAUUSD-M5": "Gold M5 · Long und Short, lernt wöchentlich neu, Trades höchstens 4 Stunden, handelt nicht",
 };
 const SCRIPT: Record<KiMarket, string> = {
   XAUUSD: "scripts/schatten.py",
   NAS100: "scripts/schatten_nas100.py",
+  "NAS100-L": "scripts/schatten_nas100_lernt.py",
   "XAUUSD-M5": "scripts/schatten_m5.py",
 };
 
@@ -96,6 +98,14 @@ export default async function KiPage({ searchParams }: PageProps<"/ki">) {
           Vorwärtsprobe seit 03.11.2026: Das Modell wurde einmal auf NAS100-Kerzen 2018–2026 gelernt und dann
           eingefroren; es lernt nie neu und handelt nur Long. Nach 500 Trades (etwa 6 Monate) wird abgebrochen, wenn
           der Schnitt bei −0,07 R oder darunter liegt; ein Urteil gibt es erst nach 3.000 Trades (etwa 3 Jahre).
+        </p>
+      )}
+      {market === "NAS100-L" && (
+        <p className="mb-6 rounded-lg border px-4 py-3 text-sm text-muted-foreground">
+          Zweiter NAS100-Läufer seit 11.11.2026, neben der eingefrorenen Vorwärtsprobe: gleiche Kerzen und Regeln, aber
+          das Modell lernt wie Gold M15 jeden Samstag neu. Bis zum ersten Lernen am 14.11. hat er die Vorhersagen der
+          Probe übernommen (Modell nas-v1), danach trennen sich beide. Prüfpunkte wie bei der Probe, gezählt über alle
+          Modellversionen.
         </p>
       )}
       {market === "XAUUSD-M5" && (
@@ -184,7 +194,7 @@ export default async function KiPage({ searchParams }: PageProps<"/ki">) {
               <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1">
                 <Dot className="bg-profit" label="Long" />
                 {info.sides.includes("short") && <Dot className="bg-loss" label="Short" />}
-                <Dot className="bg-chart-axis/60" label={market === "NAS100" ? "NAS100-Kurs" : "Goldkurs"} />
+                <Dot className="bg-chart-axis/60" label={info.symbol === "NAS100." ? "NAS100-Kurs" : "Goldkurs"} />
                 <span>Netto-R nach Spread und Swap. Über der Nulllinie entsteht ein Signal.</span>
               </CardDescription>
             </CardHeader>
@@ -234,7 +244,7 @@ export default async function KiPage({ searchParams }: PageProps<"/ki">) {
 /** Umschaltung zwischen den Märkten; Gold bleibt die Grundadresse /ki. */
 function MarketSwitch({ market }: { market: KiMarket }) {
   return (
-    <nav aria-label="Markt" className="mb-6 inline-flex rounded-lg border p-1">
+    <nav aria-label="Markt" className="mb-6 inline-flex flex-wrap rounded-lg border p-1">
       {(Object.keys(KI_MARKETS) as KiMarket[]).map((m) => (
         <Link
           key={m}

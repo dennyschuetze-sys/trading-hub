@@ -33,6 +33,13 @@ describe("tradeKey", () => {
     expect(parseTradeKey("gold-long-1793700000")).toBeNull();
   });
 
+  it("kennt NAS100 lernend", () => {
+    const key = tradeKey({ market: "NAS100-L", side: "long", signal_at: "2026-11-03T10:00:00+00:00" });
+    expect(key).toBe("nas100-lernt-long-1793700000");
+    expect(parseTradeKey(key)).toEqual({ market: "NAS100-L", side: "long", signalAt: "2026-11-03T10:00:00.000Z" });
+    expect(parseMarket("nas100-lernt")).toBe("NAS100-L");
+  });
+
   it("kennt Gold M5", () => {
     const key = tradeKey({ market: "XAUUSD-M5", side: "short", signal_at: "2026-11-04T08:05:00+00:00" });
     expect(key).toBe("gold-m5-short-1793779500");

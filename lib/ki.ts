@@ -5,9 +5,10 @@ import { formatNumber } from "@/lib/trading";
 // KI-Schattenbetrieb: Die Gold-KI aus dem Projekt gold-ki (scripts/schatten.py) sagt jede M15-Kerze von XAUUSD
 // voraus, rechnet gedachte Trades ab und lernt wöchentlich neu. Sie handelt nicht; geschrieben wird über ki_ingest().
 // Daneben läuft seit 03.11.2026 die Vorwärtsprobe NAS100 Long (scripts/schatten_nas100.py, eingefrorenes Modell)
-// und seit 04.11.2026 Gold auf M5 (scripts/schatten_m5.py, eingefrorene Modelle, Trades höchstens 4 Stunden).
+// und seit 04.11.2026 Gold auf M5 (scripts/schatten_m5.py, lernt seit 11.11. wöchentlich, Trades höchstens 4 Stunden).
+// Seit 11.11.2026 läuft NAS100 Long ein zweites Mal, lernend (scripts/schatten_nas100_lernt.py, market NAS100-L).
 
-export type KiMarket = "XAUUSD" | "NAS100" | "XAUUSD-M5";
+export type KiMarket = "XAUUSD" | "NAS100" | "NAS100-L" | "XAUUSD-M5";
 
 export const KI_MARKETS: Record<
   KiMarket,
@@ -24,6 +25,14 @@ export const KI_MARKETS: Record<
   NAS100: {
     slug: "nas100",
     label: "NAS100",
+    symbol: "NAS100.",
+    sides: ["long"],
+    timeframes: ["M15", "H1", "H4"],
+    hold: "12 Stunden",
+  },
+  "NAS100-L": {
+    slug: "nas100-lernt",
+    label: "NAS100 lernend",
     symbol: "NAS100.",
     sides: ["long"],
     timeframes: ["M15", "H1", "H4"],
@@ -249,7 +258,7 @@ function bandAt(band: BandPoint[], n: number): Omit<BandPoint, "n"> | null {
 
 /**
  * URL-Schlüssel eines gedachten Trades: Richtung und Signalzeit in Sekunden, z. B. „short-1793289600“; außer bei
- * Gold mit dem Markt davor, z. B. „nas100-long-1793289600“ oder „gold-m5-short-1793289600“.
+ * Gold mit dem Markt davor, z. B. „nas100-long-1793289600“, „nas100-lernt-long-1793289600“ oder „gold-m5-short-1793289600“.
  */
 export function tradeKey(trade: Pick<KiTrade, "side" | "signal_at"> & { market?: string }) {
   const market = KI_MARKETS[trade.market as KiMarket];
@@ -258,7 +267,7 @@ export function tradeKey(trade: Pick<KiTrade, "side" | "signal_at"> & { market?:
 }
 
 export function parseTradeKey(key: string): { market: KiMarket; side: KiSide; signalAt: string } | null {
-  const match = /^(?:(nas100|gold-m5)-)?(long|short)-(\d{9,11})$/.exec(key);
+  const match = /^(?:(nas100-lernt|nas100|gold-m5)-)?(long|short)-(\d{9,11})$/.exec(key);
   if (!match) return null;
   return {
     market: match[1] ? parseMarket(match[1]) : "XAUUSD",

@@ -36,7 +36,7 @@ export default async function KiTradePage({ params }: PageProps<"/ki/[trade]">) 
   const reasons = parseReasons(t.reasons);
   const market = KI_MARKETS[parsed.market];
   const back = parsed.market === "XAUUSD" ? "/ki" : `/ki?markt=${market.slug}`;
-  const unit = parsed.market === "NAS100" ? "Punkte" : "USD";
+  const unit = KI_MARKETS[parsed.market].symbol === "NAS100." ? "Punkte" : "USD";
   const distance = (price: number | null) =>
     t.entry_price != null && price != null ? `${formatNumber(Math.abs(price - t.entry_price), 2)} ${unit}` : undefined;
 
@@ -110,6 +110,7 @@ function ReasonsCard({ trade, reasons }: { trade: KiTrade; reasons: Reasons | nu
           <CardDescription>
             Für diesen Trade liegen keine Gründe vor.
             {trade.market === "NAS100" && " Die Vorwärtsprobe NAS100 speichert keine Gründe je Signal."}
+            {trade.market === "NAS100-L" && " Der lernende NAS100-Läufer speichert keine Gründe je Signal."}
             {trade.market === "XAUUSD-M5" && " Der Schattenbetrieb Gold M5 speichert keine Gründe je Signal."}
           </CardDescription>
         </CardHeader>
