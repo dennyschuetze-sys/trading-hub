@@ -1,7 +1,7 @@
 import type { Json, Tables } from "@/lib/database.types";
 
-// EA-Monitor: Der Gunner-EA (Market-EA „Xauusd M1 Gunner Multi Preview“) läuft in den VT-Terminals 3 und 4 auf je
-// einem Demokonto. Das Skript ea-monitor/scripts/melden.py liest Konto und Deals alle 15 Minuten über die
+// EA-Monitor: Der Gunner-EA (Market-EA „Xauusd M1 Gunner Multi Preview“) läuft im VT-Terminal 3 auf einem
+// Demokonto (Terminal 4 bis 16.11.2026). Das Skript ea-monitor/scripts/melden.py liest Konto und Deals alle 15 Minuten über die
 // MT5-Schnittstelle und meldet sie über ea_ingest(). Dazu kommt eine Vorhersage, an welchen Tagen der EA handelt,
 // aus dem MT5-Wirtschaftskalender und dem Backtest 2025–2026.
 

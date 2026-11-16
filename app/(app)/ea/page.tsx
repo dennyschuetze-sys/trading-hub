@@ -32,7 +32,7 @@ import { formatDateTime, formatMoney, formatNumber, pnlClass } from "@/lib/tradi
 import { cn } from "@/lib/utils";
 
 const TITLE = "EA-Monitor";
-const DESCRIPTION = "Gunner-EA auf zwei Demokonten · Backtest als Maßstab · Vorhersage der Handelstage aus US-News";
+const DESCRIPTION = "Gunner-EA auf einem Demokonto · Backtest als Maßstab · Vorhersage der Handelstage aus US-News";
 const RECENT = 12;
 const FORECAST_DAYS = 25;
 const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr"];
