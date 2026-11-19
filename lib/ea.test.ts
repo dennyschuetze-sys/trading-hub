@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  byEa,
   byStrategy,
   equityPoints,
+  expectedTrades,
   forecastChecks,
   forecastIntensity,
   formatPips,
   parseBacktest,
+  parseEaSettings,
+  parseKombiBacktest,
   parseFamilies,
   parseSettings,
   riskWarning,
@@ -120,5 +124,36 @@ describe("Parser und Format", () => {
   it("Intensität bleibt zwischen 0 und 1", () => {
     expect(forecastIntensity(0.2)).toBe(0);
     expect(forecastIntensity(0.95)).toBe(1);
+  });
+});
+
+describe("T3: mehrere EAs", () => {
+  it("liest Einstellungen je EA und verwirft Unbrauchbares", () => {
+    expect(parseEaSettings({ X5M_G: { RiskPercent: 3, x: null }, FVG_Duo: 5 })).toEqual({ X5M_G: { RiskPercent: 3 } });
+    expect(parseEaSettings(null)).toEqual({});
+  });
+  it("liest den Backtest je EA und die Monatsrenditen", () => {
+    const bt = parseKombiBacktest({
+      period: "2026",
+      stats: { end_balance: 3613, max_dd_equity: 0.145, trades: 296 },
+      eas: [{ key: "FVG_Duo", trades: 130, win_rate: 0.57, profit: 560 }, { key: 3 }],
+      months: [{ month: "2026-01", ret: 13.3 }, { month: "2026-02" }],
+    });
+    expect(bt.endBalance).toBe(3613);
+    expect(bt.eas).toEqual([{ key: "FVG_Duo", trades: 130, winRate: 0.57, profit: 560 }]);
+    expect(bt.months).toHaveLength(1);
+  });
+  it("rechnet je EA, auch ohne Trades", () => {
+    const rows = byEa(["X5M_G", "FVG_Duo"], [
+      { status: "zu", strategy: "FVG_Duo", profit: 20, pips: 50 },
+      { status: "zu", strategy: "FVG_Duo", profit: -10, pips: -25 },
+      { status: "offen", strategy: "FVG_Duo", profit: 4, pips: 8 },
+    ]);
+    expect(rows[0]).toMatchObject({ key: "X5M_G", closed: 0, open: 0, winRate: null, profit: 0 });
+    expect(rows[1]).toMatchObject({ closed: 2, open: 1, winRate: 0.5, profit: 10, openProfit: 4, meanPips: 12.5 });
+  });
+  it("erwartete Trades linear über die Zeit", () => {
+    expect(expectedTrades(310, 310, "2026-11-01T00:00:00Z", new Date("2026-11-11T00:00:00Z"))).toBeCloseTo(10);
+    expect(expectedTrades(310, 310, "2026-12-01T00:00:00Z", new Date("2026-11-11T00:00:00Z"))).toBe(0);
   });
 });

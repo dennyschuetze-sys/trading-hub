@@ -1,7 +1,7 @@
 import type { Json, Tables } from "@/lib/database.types";
 
-// EA-Monitor: Der Gunner-EA (Market-EA „Xauusd M1 Gunner Multi Preview“) läuft im VT-Terminal 3 auf einem
-// Demokonto (Terminal 4 bis 16.11.2026). Das Skript ea-monitor/scripts/melden.py liest Konto und Deals alle 15 Minuten über die
+// EA-Monitor: Seit 19.11.2026 läuft im VT-Terminal 3 ein Vorwärtstest mit drei EAs auf einem 1000-€-Demokonto
+// (X5M G auf Gold, FVG Duo und DRV15_P auf NAS100). Bis dahin lief dort der Gunner (Terminal 4 bis 16.11.2026). Das Skript ea-monitor/scripts/melden.py liest Konto und Deals alle 15 Minuten über die
 // MT5-Schnittstelle und meldet sie über ea_ingest(). Dazu kommt eine Vorhersage, an welchen Tagen der EA handelt,
 // aus dem MT5-Wirtschaftskalender und dem Backtest 2025–2026.
 
@@ -251,3 +251,109 @@ export function forecastIntensity(probability: number) {
 }
 
 export const NO_NEWS_FAMILY = "ohne hohe News";
+
+// --------------------------------------------------------------------------- T3: mehrere EAs auf einem Konto
+
+/** Die EAs im Vorwärtstest T3, in Anzeige-Reihenfolge. key = Strategie-Spalte der Positionen. */
+export const T3_EAS = [
+  { key: "X5M_G", label: "X5M G", market: "XAUUSD-VIP M15", unit: "Pips" },
+  { key: "FVG_Duo", label: "FVG Duo", market: "NAS100. M5", unit: "Pkt" },
+  { key: "DRV15_P", label: "DRV15", market: "NAS100. M15", unit: "Pkt" },
+] as const;
+
+export type EaSettingsMap = Record<string, Record<string, number | string>>;
+
+/** Eingaben je EA: {"X5M_G": {"RiskPercent": 3, …}, …}. */
+export function parseEaSettings(json: Json): EaSettingsMap {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return {};
+  const out: EaSettingsMap = {};
+  for (const [key, value] of Object.entries(json as Record<string, Json>)) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+    const row: Record<string, number | string> = {};
+    for (const [k, v] of Object.entries(value as Record<string, Json>)) {
+      if (typeof v === "number" || typeof v === "string") row[k] = v;
+    }
+    out[key] = row;
+  }
+  return out;
+}
+
+export type EaBacktestRow = { key: string; trades: number; winRate: number | null; profit: number };
+export type KombiBacktest = {
+  period: string;
+  settings: string;
+  endBalance: number | null;
+  maxDd: number | null;
+  trades: number | null;
+  days: number;
+  eas: EaBacktestRow[];
+  months: { month: string; ret: number }[];
+};
+
+/** Backtest-Maßstab für T3 aus ea_status.backtest. days = Länge des Backtest-Zeitraums in Tagen. */
+export function parseKombiBacktest(json: Json): KombiBacktest {
+  const o = json && typeof json === "object" && !Array.isArray(json) ? (json as Record<string, Json>) : {};
+  const stats = o.stats && typeof o.stats === "object" && !Array.isArray(o.stats) ? (o.stats as Record<string, Json>) : {};
+  const num = (v: Json | undefined) => (typeof v === "number" ? v : null);
+  const list = (v: Json | undefined) => (Array.isArray(v) ? v : []);
+  const eas = list(o.eas).flatMap((x) => {
+    if (!x || typeof x !== "object" || Array.isArray(x)) return [];
+    const r = x as Record<string, Json>;
+    return typeof r.key === "string" && typeof r.trades === "number" && typeof r.profit === "number"
+      ? [{ key: r.key, trades: r.trades, winRate: num(r.win_rate), profit: r.profit }]
+      : [];
+  });
+  const months = list(o.months).flatMap((x) => {
+    if (!x || typeof x !== "object" || Array.isArray(x)) return [];
+    const r = x as Record<string, Json>;
+    return typeof r.month === "string" && typeof r.ret === "number" ? [{ month: r.month, ret: r.ret }] : [];
+  });
+  return {
+    period: typeof o.period === "string" ? o.period : "",
+    settings: typeof o.settings === "string" ? o.settings : "",
+    endBalance: num(stats.end_balance),
+    maxDd: num(stats.max_dd_equity),
+    trades: num(stats.trades),
+    days: 310,
+    eas,
+    months,
+  };
+}
+
+export type EaResult = {
+  key: string;
+  closed: number;
+  open: number;
+  winRate: number | null;
+  profit: number;
+  openProfit: number;
+  meanPips: number | null;
+};
+
+/** Ergebnis je EA (Strategie-Spalte), auch für EAs ohne Trade. */
+export function byEa(
+  keys: readonly string[],
+  positions: Pick<EaPosition, "status" | "strategy" | "profit" | "pips">[],
+): EaResult[] {
+  return keys.map((key) => {
+    const own = positions.filter((p) => p.strategy === key);
+    const closed = own.filter((p) => p.status === "zu");
+    const wins = closed.filter((p) => p.profit > 0).length;
+    const pips = closed.map((p) => p.pips).filter((v): v is number => v != null);
+    return {
+      key,
+      closed: closed.length,
+      open: own.length - closed.length,
+      winRate: closed.length ? wins / closed.length : null,
+      profit: Math.round(closed.reduce((s, p) => s + p.profit, 0) * 100) / 100,
+      openProfit: Math.round(own.filter((p) => p.status === "offen").reduce((s, p) => s + p.profit, 0) * 100) / 100,
+      meanPips: pips.length ? pips.reduce((s, v) => s + v, 0) / pips.length : null,
+    };
+  });
+}
+
+/** Erwartete Anzahl Trades seit dem Start, linear aus dem Backtest (Trades je Tag × verstrichene Tage). */
+export function expectedTrades(btTrades: number, btDays: number, liveSince: string, now = new Date()) {
+  const days = Math.max(0, (now.getTime() - new Date(liveSince).getTime()) / 86_400_000);
+  return btDays > 0 ? (btTrades / btDays) * days : 0;
+}

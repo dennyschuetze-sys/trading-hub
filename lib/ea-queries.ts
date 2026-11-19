@@ -16,7 +16,7 @@ export async function fetchEaOverview(supabase: Supabase): Promise<EaOverview> {
   const [status, accounts, positions, forecast] = await Promise.all([
     supabase.from("ea_status").select("*").maybeSingle(),
     supabase.from("ea_accounts").select("*").order("tag"),
-    // Der Gunner macht an starken Tagen 10–30 Trades je Konto; 1000 reichen für einige Wochen Demo
+    // T3: drei EAs, zusammen etwa 30 Trades im Monat; 1000 reichen für Jahre
     supabase.from("ea_positions").select("*").order("opened_at", { ascending: false }).limit(1000),
     supabase.from("ea_forecast").select("*").order("day"),
   ]);
